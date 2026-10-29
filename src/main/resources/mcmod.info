@@ -1,0 +1,14 @@
+[{
+  "modid": "wurst0",
+  "name": "Wurst0",
+  "description": "Wurst0 - a 1.12.2 port of Wurst7-CevAPI. Licensed GPL-3.0-or-later.",
+  "version": "${version}",
+  "mcversion": "${mcversion}",
+  "url": "https://github.com/apikun/Wurst0-CevAPI",
+  "updateUrl": "",
+  "authorList": ["apikun", "Alexander01998", "CevAPI contributors"],
+  "credits": "Based on Wurst7 / Wurst7-CevAPI by Alexander01998 and contributors (GPL-3.0)",
+  "logoFile": "",
+  "screenshots": [],
+  "dependencies": []
+}]

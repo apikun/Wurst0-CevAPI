@@ -1,44 +1,10 @@
-# gradle
-
 .gradle/
 build/
+run/
 out/
 classes/
-logs/
-
-# idea
-
-.idea/
 *.iml
-*.ipr
-*.iws
-
-# vscode
-
-.settings/
-.vscode/
-bin/
-.classpath
-.project
-
-# fabric
-
-run/
-*.launch
-remappedSrc/
-
-# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
-hs_err_pid*
-
-# python
-*.pyc
-*.py
-
-Thumbs.db
-desktop.ini
-*.rar
+.idea/
+eclipse/
 *.log
-*.txt
-*.jsonl
-!scripts/custom_build_gui.py
-audits/
+tools/
