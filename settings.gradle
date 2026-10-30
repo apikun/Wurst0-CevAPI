@@ -1,1 +1,94 @@
+pluginManagement {
+        repositories {
+                maven {
+                        // patched RetroFuturaGradle (decompiler heap fits 4GB sandboxes)
+                        name = 'LocalPatched'
+                        url = 'file:///home/z/my-project/tools/localmaven'
+                }
+                maven {
+                        // RetroFuturaGradle
+                        name = 'GTNH Maven'
+                        url = 'https://nexus.gtnewhorizons.com/repository/public/'
+                        mavenContent {
+                                includeGroupByRegex 'com\\.gtnewhorizons\\..+'
+                                includeGroup 'com.gtnewhorizons'
+                        }
+                }
+                gradlePluginPortal()
+                mavenCentral()
+        }
+}
+
+// Mirror-aware replication of RetroFuturaGradle's repository layout.
+// PREFER_SETTINGS replaces the plugin's own repositories so that Maven
+// Central artifacts resolve from mirrors that don't rate-limit shared
+// CI egress IPs (repo.maven.apache.org answers HTTP 429 otherwise).
+dependencyResolutionManagement {
+        repositoriesMode = RepositoriesMode.PREFER_SETTINGS
+        repositories {
+                maven {
+                        name = 'mojang'
+                        url = 'https://libraries.minecraft.net'
+                        mavenContent {
+                                includeGroup 'ca.weblite'
+                                includeGroup 'com.ibm.icu'
+                                includeGroup 'com.mojang'
+                                includeGroup 'com.paulscode'
+                                includeGroup 'java3d'
+                                includeGroup 'net.minecraft'
+                                includeGroup 'org.lwjgl.lwjgl'
+                                includeGroup 'oshi-project'
+                                includeGroup 'tv.twitch'
+                        }
+                }
+                maven {
+                        name = 'forge'
+                        url = 'https://maven.minecraftforge.net'
+                        metadataSources {
+                                artifact()
+                        }
+                        mavenContent {
+                                includeGroup 'cpw.mods'
+                                includeGroup 'de.oceanlabs.mcp'
+                                includeGroup 'net.minecraftforge'
+                                includeGroup 'org.scala-lang'
+                        }
+                }
+                maven {
+                        name = 'sponge'
+                        url = 'https://repo.spongepowered.org/maven/'
+                        metadataSources {
+                                artifact()
+                        }
+                        mavenContent {
+                                includeGroup 'lzma'
+                        }
+                }
+                exclusiveContent {
+                        forRepository {
+                                maven {
+                                        name = 'log4j2beta9fixed'
+                                        url = 'https://files.prismlauncher.org/maven/'
+                                        metadataSources {
+                                                artifact()
+                                        }
+                                }
+                        }
+                        filter {
+                                includeVersion 'org.apache.logging.log4j', 'log4j-core', '2.0-beta9-fixed'
+                                includeVersion 'org.apache.logging.log4j', 'log4j-api', '2.0-beta9-fixed'
+                        }
+                }
+                maven {
+                        name = 'CentralMirror'
+                        url = 'https://maven-central.storage-download.googleapis.com/maven2/'
+                }
+                maven {
+                        name = 'Aliyun'
+                        url = 'https://maven.aliyun.com/repository/public'
+                }
+                mavenCentral()
+        }
+}
+
 rootProject.name = 'Wurst0'

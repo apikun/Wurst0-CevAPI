@@ -5,13 +5,14 @@
 package net.wurst0.feature;
 
 import net.wurst0.Category;
+import net.wurst0.command.CmdException;
 
 public abstract class Command extends Feature
 {
-	public Command(String name, String description)
-	{
-		super(name, description, Category.COMMANDS);
-	}
+        public Command(String name, String description)
+        {
+                super(name, description, Category.COMMANDS);
+        }
 
-	public abstract void call(String[] args) throws CmdException;
+        public abstract void call(String[] args) throws CmdException;
 }

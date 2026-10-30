@@ -29,13 +29,15 @@ public final class NukerHack extends Hack implements UpdateListener
 	private final CheckboxSetting swing =
 		new CheckboxSetting("Swing", true);
 
+	private BlockPos lastTarget;
+
 	public NukerHack()
 	{
 		super("Nuker",
 			"Automatically breaks blocks around you, starting with the"
 				+ " closest one.");
 		setCategory(Category.BLOCKS);
-		addSetting(range, swing);
+		addSettings(range, swing);
 	}
 
 	@Override
@@ -76,14 +78,26 @@ public final class NukerHack extends Hack implements UpdateListener
 		}
 
 		if(best == null)
+		{
+			lastTarget = null;
 			return;
+		}
 
 		PlayerControllerMP pc = mc.playerController;
-		if(!pc.getIsHittingBlock() || !best.equals(pc.getCurrentBlock()))
+		if(!best.equals(lastTarget))
+		{
 			pc.clickBlock(best, EnumFacing.UP);
+			lastTarget = best;
+		}
 		pc.onPlayerDamageBlock(best, EnumFacing.UP);
 
 		if(swing.isChecked())
 			p.swingArm(EnumHand.MAIN_HAND);
+	}
+
+	@Override
+	protected void onDisable()
+	{
+		lastTarget = null;
 	}
 }

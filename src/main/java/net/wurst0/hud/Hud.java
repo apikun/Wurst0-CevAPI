@@ -17,44 +17,44 @@ import net.wurst0.feature.Hack;
 
 public final class Hud
 {
-	private final Minecraft mc = Minecraft.getMinecraft();
+        private final Minecraft mc = Minecraft.getMinecraft();
 
-	public void render(float partialTicks)
-	{
-		if(mc.player == null || mc.gameSettings.showDebugInfo)
-			return;
+        public void render(float partialTicks)
+        {
+                if(mc.player == null || mc.gameSettings.showDebugInfo)
+                        return;
 
-		FontRenderer fr = mc.fontRendererObj;
+                FontRenderer fr = mc.fontRenderer;
 
-		// watermark, bottom-left
-		String watermark = "Wurst0 " + WurstClient.VERSION
-			+ " (MC " + WurstClient.MC_VERSION + ")";
-		fr.drawStringWithShadow(watermark, 2,
-			new ScaledResolution(mc).getScaledHeight()
-				- fr.FONT_HEIGHT - 1, 0x20FF20);
+                // watermark, bottom-left
+                String watermark = "Wurst0 " + WurstClient.VERSION
+                        + " (MC " + WurstClient.MC_VERSION + ")";
+                fr.drawStringWithShadow(watermark, 2,
+                        new ScaledResolution(mc).getScaledHeight()
+                                - fr.FONT_HEIGHT - 1, 0x20FF20);
 
-		// array of enabled hacks, top-right
-		List<String> enabled = new ArrayList<String>();
-		for(Hack hack : WurstClient.INSTANCE.getHacks().getList())
-			if(hack.isEnabled())
-				enabled.add(hack.getName());
+                // array of enabled hacks, top-right
+                List<String> enabled = new ArrayList<String>();
+                for(Hack hack : WurstClient.INSTANCE.getHacks().getList())
+                        if(hack.isEnabled())
+                                enabled.add(hack.getName());
 
-		Collections.sort(enabled, new Comparator<String>()
-		{
-			@Override
-			public int compare(String o1, String o2)
-			{
-				return fr.getStringWidth(o2) - fr.getStringWidth(o1);
-			}
-		});
+                Collections.sort(enabled, new Comparator<String>()
+                {
+                        @Override
+                        public int compare(String o1, String o2)
+                        {
+                                return fr.getStringWidth(o2) - fr.getStringWidth(o1);
+                        }
+                });
 
-		int y = 2;
-		for(String name : enabled)
-		{
-			int x = new ScaledResolution(mc).getScaledWidth()
-				- fr.getStringWidth(name) - 2;
-			fr.drawStringWithShadow(name, x, y, 0xF0F0F0);
-			y += fr.FONT_HEIGHT + 1;
-		}
-	}
+                int y = 2;
+                for(String name : enabled)
+                {
+                        int x = new ScaledResolution(mc).getScaledWidth()
+                                - fr.getStringWidth(name) - 2;
+                        fr.drawStringWithShadow(name, x, y, 0xF0F0F0);
+                        y += fr.FONT_HEIGHT + 1;
+                }
+        }
 }

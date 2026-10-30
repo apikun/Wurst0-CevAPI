@@ -16,63 +16,63 @@ import net.wurst0.feature.Hack;
 
 public final class AutoToolHack extends Hack implements UpdateListener
 {
-	private final Minecraft mc = Minecraft.getMinecraft();
+        private final Minecraft mc = Minecraft.getMinecraft();
 
-	public AutoToolHack()
-	{
-		super("AutoTool",
-			"Automatically switches to the best tool in your hotbar"
-				+ " for the block you are looking at or breaking.");
-		setCategory(Category.BLOCKS);
-	}
+        public AutoToolHack()
+        {
+                super("AutoTool",
+                        "Automatically switches to the best tool in your hotbar"
+                                + " for the block you are looking at or breaking.");
+                setCategory(Category.BLOCKS);
+        }
 
-	@Override
-	public void onUpdate()
-	{
-		EntityPlayerSP p = mc.player;
-		if(p == null || mc.world == null)
-			return;
-		if(mc.objectMouseOver == null || mc.objectMouseOver.typeOfHit
-			!= RayTraceResult.Type.BLOCK)
-			return;
+        @Override
+        public void onUpdate()
+        {
+                EntityPlayerSP p = mc.player;
+                if(p == null || mc.world == null)
+                        return;
+                if(mc.objectMouseOver == null || mc.objectMouseOver.typeOfHit
+                        != RayTraceResult.Type.BLOCK)
+                        return;
 
-		BlockPos pos = mc.objectMouseOver.getBlockPos();
-		if(pos == null)
-			return;
+                BlockPos pos = mc.objectMouseOver.getBlockPos();
+                if(pos == null)
+                        return;
 
-		IBlockState state = mc.world.getBlockState(pos);
-		int current = p.inventory.currentItem;
+                IBlockState state = mc.world.getBlockState(pos);
+                int current = p.inventory.currentItem;
 
-		int best = current;
-		float bestScore = score(p.inventory.getStackInSlot(current), state);
+                int best = current;
+                float bestScore = score(p.inventory.getStackInSlot(current), state);
 
-		for(int i = 0; i < 9; i++)
-		{
-			float score = score(p.inventory.getStackInSlot(i), state);
-			if(score > bestScore)
-			{
-				bestScore = score;
-				best = i;
-			}
-		}
+                for(int i = 0; i < 9; i++)
+                {
+                        float score = score(p.inventory.getStackInSlot(i), state);
+                        if(score > bestScore)
+                        {
+                                bestScore = score;
+                                best = i;
+                        }
+                }
 
-		if(best != current)
-			p.inventory.currentItem = best;
-	}
+                if(best != current)
+                        p.inventory.currentItem = best;
+        }
 
-	private float score(ItemStack stack, IBlockState state)
-	{
-		if(stack == null || stack.isEmpty())
-			return -1;
+        private float score(ItemStack stack, IBlockState state)
+        {
+                if(stack == null || stack.isEmpty())
+                        return -1;
 
-		if(stack.getMaxDamage() > 0
-			&& stack.getMaxDamage() - stack.getItemDamage() <= 1)
-			return -1;
+                if(stack.getMaxDamage() > 0
+                        && stack.getMaxDamage() - stack.getItemDamage() <= 1)
+                        return -1;
 
-		float efficiency = stack.getItem().getStrVsBlock(stack, state);
-		if(stack.canHarvestBlock(state))
-			efficiency += 1000;
+                float efficiency = stack.getItem().getDestroySpeed(stack, state);
+                if(stack.canHarvestBlock(state))
+                        efficiency += 1000;
 
-		return efficiency;
-	}
+                return efficiency;
+        }
 }

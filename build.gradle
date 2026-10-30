@@ -1,42 +1,38 @@
 // Wurst0 - 1.12.2 port of Wurst7-CevAPI (GPL-3.0)
-buildscript {
-	repositories {
-		maven { url = 'https://maven.minecraftforge.net' }
-		maven { url = 'https://libraries.minecraft.net' }
-		mavenCentral()
-	}
-	dependencies {
-		classpath 'net.minecraftforge.gradle:ForgeGradle:2.3-SNAPSHOT'
-	}
+// Build system: RetroFuturaGradle 2.0.2 (GTNH) - the actively maintained
+// toolchain for Minecraft 1.12.2. Requires Gradle 8.x. Java toolchain 8.
+plugins {
+        id 'java-library'
+        id 'com.gtnewhorizons.retrofuturagradle' version '2.0.2'
 }
-apply plugin: 'net.minecraftforge.gradle.forge'
 
 version = '0.1.0'
 group = 'net.wurst0'
-archivesBaseName = 'Wurst0'
 
-sourceCompatibility = targetCompatibility = '1.8'
-compileJava {
-	sourceCompatibility = targetCompatibility = '1.8'
-	options.encoding = 'UTF-8'
+base {
+        archivesName = 'Wurst0'
+}
+
+java {
+        toolchain {
+                languageVersion = JavaLanguageVersion.of(8)
+        }
 }
 
 minecraft {
-	version = '1.12.2-14.23.5.2859'
-	runDir = 'run'
-	mappings = 'stable_39'
-	makeObfSourceJar = false
+        mcVersion.set('1.12.2')
+        mcpMappingChannel.set('stable')
+        mcpMappingVersion.set('39')
+}
+
+tasks.withType(JavaCompile).configureEach {
+        options.encoding = 'UTF-8'
 }
 
 processResources {
-	inputs.property 'version', project.version
-	inputs.property 'mcversion', project.minecraft.version
+        inputs.property 'version', project.version
 
-	from(sourceSets.main.resources.srcDirs) {
-		include 'mcmod.info'
-		expand 'version': project.version, 'mcversion': project.minecraft.version
-	}
-	from(sourceSets.main.resources.srcDirs) {
-		exclude 'mcmod.info'
-	}
+        filesMatching('mcmod.info') {
+                expand 'version': project.version, 'mcversion': '1.12.2'
+        }
 }

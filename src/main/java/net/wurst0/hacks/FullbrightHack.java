@@ -16,52 +16,52 @@ import net.wurst0.settings.SliderSetting;
 
 public final class FullbrightHack extends Hack implements UpdateListener
 {
-	private final Minecraft mc = Minecraft.getMinecraft();
+        private final Minecraft mc = Minecraft.getMinecraft();
 
-	private final ModeSetting method = new ModeSetting("Method",
-		new String[]{"Gamma", "NightVision"}, 0);
-	private final SliderSetting gamma =
-		new SliderSetting("Gamma", 8, 1, 15, 0.5);
+        private final ModeSetting method = new ModeSetting("Method",
+                new String[]{"Gamma", "NightVision"}, 0);
+        private final SliderSetting gamma =
+                new SliderSetting("Gamma", 8, 1, 15, 0.5);
 
-	private float oldGamma = 1F;
+        private float oldGamma = 1F;
 
-	public FullbrightHack()
-	{
-		super("Fullbright",
-			"Makes everything visible in the dark. Gamma raises the"
-				+ " brightness slider beyond its limit, NightVision applies"
-				+ " a local night vision effect.");
-		setCategory(Category.RENDER);
-		addSetting(method, gamma);
-	}
+        public FullbrightHack()
+        {
+                super("Fullbright",
+                        "Makes everything visible in the dark. Gamma raises the"
+                                + " brightness slider beyond its limit, NightVision applies"
+                                + " a local night vision effect.");
+                setCategory(Category.RENDER);
+                addSettings(method, gamma);
+        }
 
-	@Override
-	protected void onEnable()
-	{
-		oldGamma = mc.gameSettings.gammaSetting;
-	}
+        @Override
+        protected void onEnable()
+        {
+                oldGamma = mc.gameSettings.gammaSetting;
+        }
 
-	@Override
-	public void onUpdate()
-	{
-		if(method.getSelected().equals("Gamma"))
-		{
-			mc.gameSettings.gammaSetting = gamma.getValueF();
-			return;
-		}
+        @Override
+        public void onUpdate()
+        {
+                if(method.getSelected().equals("Gamma"))
+                {
+                        mc.gameSettings.gammaSetting = gamma.getValueF();
+                        return;
+                }
 
-		EntityPlayerSP p = mc.player;
-		if(p != null && !p.isPotionActive(MobEffects.NIGHT_VISION))
-			p.addPotionEffect(new PotionEffect(MobEffects.NIGHT_VISION,
-				36000, 0, false, false));
-	}
+                EntityPlayerSP p = mc.player;
+                if(p != null && !p.isPotionActive(MobEffects.NIGHT_VISION))
+                        p.addPotionEffect(new PotionEffect(MobEffects.NIGHT_VISION,
+                                36000, 0, false, false));
+        }
 
-	@Override
-	protected void onDisable()
-	{
-		if(method.getSelected().equals("Gamma"))
-			mc.gameSettings.gammaSetting = oldGamma;
-		else if(mc.player != null)
-			mc.player.removePotionEffect(MobEffects.NIGHT_VISION);
-	}
+        @Override
+        protected void onDisable()
+        {
+                if(method.getSelected().equals("Gamma"))
+                        mc.gameSettings.gammaSetting = oldGamma;
+                else if(mc.player != null)
+                        mc.player.removePotionEffect(MobEffects.NIGHT_VISION);
+        }
 }

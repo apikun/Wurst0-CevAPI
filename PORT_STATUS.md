@@ -6,11 +6,15 @@ Port of [Wurst7-CevAPI](https://github.com/cev-api/Wurst7-CevAPI)
 - **Branch:** `mc1.12.2` on [apikun/Wurst0-CevAPI](https://github.com/apikun/Wurst0-CevAPI)
 - **Mod id:** `wurst0`  **Package:** `net.wurst0`  **Version:** 0.1.0
 - **License:** GPL-3.0-or-later (unchanged - this is a derivative of Wurst7)
-- **Target:** Forge 1.12.2-14.23.5.2859, MCP `stable_39` mappings, ForgeGradle 2.3 + Gradle 4.10.3
+- **Target:** Forge 1.12.2-14.23.5.2859, MCP `stable_39` mappings, RetroFuturaGradle 2.0.2 + Gradle 9.8.2
 
 ---
 
-## Current state (updated 2026-10-30)
+## Current state (updated 2026-10-30, v0.1.0 BUILD PASSING)
+
+**The mod now compiles end-to-end**: `gradle build` produces
+`build/libs/Wurst0-0.1.0.jar` (reobfuscated, drop into `.minecraft/mods`
+with Forge 1.12.2) plus a `-dev` jar for development.
 
 | Item | Count | Status |
 |---|---|---|
@@ -64,15 +68,36 @@ Port of [Wurst7-CevAPI](https://github.com/cev-api/Wurst7-CevAPI)
 
 ## Build
 
+**Toolchain that is proven to work (2026-10-30):**
+
+| Piece | Version | Why |
+|---|---|---|
+| Build system | RetroFuturaGradle 2.0.2 | FG 2.3 is dead: its `userdev` artifact was deleted from the new Forge maven |
+| Gradle | **9.8.2** | RFG 2.0.2 ships Java 25 bytecode; Gradle 9.x can load it |
+| Gradle runtime JVM | Temurin **25** | RFG 2.0.2 classes are Java 25 (class file 69) |
+| Compile toolchain | Temurin **8** | 1.12.2 mods must be Java 8 |
+| MCP mappings | stable_39 | classic 1.12.2 names |
+
 ```bash
-# requires JDK 8 and Gradle 4.10.3 (FG 2.3 does not run on modern Java)
-export JAVA_HOME=/path/to/jdk8
-gradle build          # jar lands in build/libs/Wurst0-0.1.0.jar
-gradle runClient      # optional: launch a dev client
+export JAVA_HOME=/path/to/jdk-25        # runs Gradle
+gradle build                            # compiles with the Java 8 toolchain
+gradle runClient                        # dev client
 ```
 
-In this sandbox the toolchain lives in `/home/z/my-project/tools/`
-(`jdk8u504-b01`, `gradle-4.10.3`).
+`gradle.properties` points `org.gradle.java.installations.paths` at the local
+JDK 8 - adjust for your machine.
+
+**Sandbox-specific notes (not needed on a normal machine):**
+- `settings.gradle` replicates RFG's repositories with PREFER_SETTINGS and
+  replaces Maven Central with mirrors (`maven-central.storage-download.googleapis.com`,
+  Aliyun) because shared CI egress IPs get HTTP 429 from Central. Delete the
+  `dependencyResolutionManagement` block if you don't need it.
+- `devtools/patch_rfg_heap.py` republishes RFG 2.0.2 with the FernFlower
+  decompiler worker heap reduced 3072M -> 2048M so a 4GB CI sandbox can run
+  the (one-time) decompile. On a machine with >= 8GB RAM you can skip it and
+  use the stock RFG from the GTNH maven.
+- A full clean build takes ~10 min (one-time decompile/recompile of Minecraft
+  itself is cached afterwards in `~/.gradle` or the `-g` cache dir).
 
 ## Sandbox / environment notes
 

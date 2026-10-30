@@ -4,7 +4,9 @@
  */
 package net.wurst0;
 
-import net.minecraftforge.client.event.InputEvent.KeyInputEvent;
+import org.lwjgl.input.Keyboard;
+
+import net.minecraftforge.fml.common.gameevent.InputEvent.KeyInputEvent;
 import net.minecraftforge.client.event.RenderGameOverlayEvent;
 import net.minecraftforge.client.event.RenderWorldLastEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
@@ -50,10 +52,16 @@ public final class ForgeEvents
         @SubscribeEvent
         public void onKeyInput(KeyInputEvent event)
         {
-                WurstClient.INSTANCE.getKeybindManager()
-                        .handleKeyPress(event.getKeyCode());
+                // 1.12.2's KeyInputEvent carries no key data; read the current
+                // event from LWJGL while vanilla's keyboard loop is dispatching it.
+                int keyCode = Keyboard.getEventKey();
+                boolean state = Keyboard.getEventKeyState();
+                if(keyCode == Keyboard.KEY_NONE || !state)
+                        return;
+
+                WurstClient.INSTANCE.getKeybindManager().handleKeyPress(keyCode);
                 WurstClient.INSTANCE.getEventManager()
-                        .fire(new KeyEvent(event.getKeyCode(), true));
+                        .fire(new KeyEvent(keyCode, true));
         }
 
         @SubscribeEvent
