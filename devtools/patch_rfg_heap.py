@@ -13,7 +13,7 @@ DST_DIR = ("/home/z/my-project/tools/localmaven/com/gtnewhorizons/"
 DST_JAR = os.path.join(DST_DIR, "retrofuturagradle-2.0.2.jar")
 
 OLD = b"3072M"
-NEW = b"2048M"
+NEW = b"1536M"
 
 if not os.path.isfile(SRC_JAR):
     raise SystemExit("source jar not found: " + SRC_JAR)

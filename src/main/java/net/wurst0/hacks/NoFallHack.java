@@ -6,30 +6,62 @@ package net.wurst0.hacks;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.EntityPlayerSP;
+import net.minecraft.network.play.client.CPacketPlayer;
 import net.wurst0.Category;
 import net.wurst0.event.listeners.UpdateListener;
 import net.wurst0.feature.Hack;
+import net.wurst0.settings.ModeSetting;
 
 public final class NoFallHack extends Hack implements UpdateListener
 {
-	private final Minecraft mc = Minecraft.getMinecraft();
+        private final Minecraft mc = Minecraft.getMinecraft();
 
-	public NoFallHack()
-	{
-		super("NoFall",
-			"Resets your fall distance every tick. NOTE: this build is"
-				+ " client-side only - the packet-based version that fully"
-				+ " prevents server-side damage is planned (see"
-				+ " PORT_STATUS.md).");
-		setCategory(Category.MOVEMENT);
-	}
+        private final ModeSetting mode = new ModeSetting("Mode",
+                new String[]{"Packet", "Client"}, 0);
 
-	@Override
-	public void onUpdate()
-	{
-		EntityPlayerSP p = mc.player;
-		if(p == null)
-			return;
-		p.fallDistance = 0;
-	}
+        private boolean sentThisFall;
+
+        public NoFallHack()
+        {
+                super("NoFall",
+                        "Protects you from fall damage. Packet mode tells the server"
+                                + " you already landed right before you hit the ground,"
+                                + " Client mode just resets your fall distance locally.");
+                setCategory(Category.MOVEMENT);
+                addSetting(mode);
+        }
+
+        @Override
+        public void onUpdate()
+        {
+                EntityPlayerSP p = mc.player;
+                if(p == null || mc.world == null)
+                        return;
+
+                if("Packet".equals(mode.getSelected()))
+                {
+                        if(p.onGround)
+                        {
+                                sentThisFall = false;
+                                return;
+                        }
+
+                        // Tell the server we are on the ground shortly before the
+                        // impact so it never computes fall damage for this fall.
+                        if(!sentThisFall && p.fallDistance > 2 && p.motionY < -0.5D
+                                && !p.isInWater() && !p.isOnLadder())
+                        {
+                                p.connection.sendPacket(new CPacketPlayer(true));
+                                sentThisFall = true;
+                        }
+                }
+
+                p.fallDistance = 0;
+        }
+
+        @Override
+        protected void onEnable()
+        {
+                sentThisFall = false;
+        }
 }

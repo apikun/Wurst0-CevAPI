@@ -1,20 +1,31 @@
 /*
  * Wurst0 - a 1.12.2 port of Wurst7-CevAPI
- * Based on Wurst7 by Alexander01998 (GPL-3.0-or-later)
- * TODO: port logic from net/wurstclient/hacks/AutoRespawnHack.java in the original
- * repo (MC 26.3 / Fabric). This stub only registers the hack so it
- * appears in the GUI; it currently does nothing when enabled.
+ * Ported from Wurst7-CevAPI AutoRespawnHack (GPL-3.0-or-later)
  */
 package net.wurst0.hacks;
 
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGameOver;
 import net.wurst0.Category;
+import net.wurst0.event.listeners.UpdateListener;
 import net.wurst0.feature.Hack;
 
-public final class AutoRespawnHack extends Hack
+public final class AutoRespawnHack extends Hack implements UpdateListener
 {
-	public AutoRespawnHack()
-	{
-		super("AutoRespawn", "[not ported yet]");
-		setCategory(Category.COMBAT);
-	}
+        private final Minecraft mc = Minecraft.getMinecraft();
+
+        public AutoRespawnHack()
+        {
+                super("AutoRespawn",
+                        "Automatically respawns you as soon as you die, without"
+                                + " showing the death screen.");
+                setCategory(Category.COMBAT);
+        }
+
+        @Override
+        public void onUpdate()
+        {
+                if(mc.currentScreen instanceof GuiGameOver && mc.player != null)
+                        mc.player.respawnPlayer();
+        }
 }

@@ -1,20 +1,45 @@
 /*
  * Wurst0 - a 1.12.2 port of Wurst7-CevAPI
- * Based on Wurst7 by Alexander01998 (GPL-3.0-or-later)
- * TODO: port logic from net/wurstclient/hacks/AutoWalkHack.java in the original
- * repo (MC 26.3 / Fabric). This stub only registers the hack so it
- * appears in the GUI; it currently does nothing when enabled.
+ * Ported from Wurst7-CevAPI AutoWalkHack (GPL-3.0-or-later)
  */
 package net.wurst0.hacks;
 
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.entity.EntityPlayerSP;
 import net.wurst0.Category;
+import net.wurst0.event.listeners.UpdateListener;
 import net.wurst0.feature.Hack;
+import net.wurst0.settings.CheckboxSetting;
 
-public final class AutoWalkHack extends Hack
+public final class AutoWalkHack extends Hack implements UpdateListener
 {
-	public AutoWalkHack()
-	{
-		super("AutoWalk", "[not ported yet]");
-		setCategory(Category.MOVEMENT);
-	}
+        private final Minecraft mc = Minecraft.getMinecraft();
+
+        private final CheckboxSetting pauseInGUIs =
+                new CheckboxSetting("Pause in GUIs", true);
+
+        public AutoWalkHack()
+        {
+                super("AutoWalk",
+                        "Walks forward automatically, as if the W key was held"
+                                + " down.");
+                setCategory(Category.MOVEMENT);
+                addSetting(pauseInGUIs);
+        }
+
+        @Override
+        public void onUpdate()
+        {
+                EntityPlayerSP p = mc.player;
+                if(p == null || mc.world == null)
+                        return;
+                if(p.movementInput == null)
+                        return;
+                if(pauseInGUIs.isChecked() && mc.currentScreen != null)
+                        return;
+                if(p.isRiding())
+                        return;
+
+                p.movementInput.moveForward = 1;
+        }
 }
