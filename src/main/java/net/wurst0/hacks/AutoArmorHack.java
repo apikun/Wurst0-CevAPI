@@ -13,7 +13,7 @@ import net.minecraft.init.Enchantments;
 import net.minecraft.inventory.ClickType;
 import net.minecraft.item.ItemArmor;
 import net.minecraft.item.ItemStack;
-import net.minecraft.util.EntityEquipmentSlot;
+import net.minecraft.inventory.EntityEquipmentSlot;
 import net.wurst0.Category;
 import net.wurst0.event.listeners.UpdateListener;
 import net.wurst0.feature.Hack;

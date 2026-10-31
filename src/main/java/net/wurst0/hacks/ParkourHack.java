@@ -14,50 +14,57 @@ import net.wurst0.settings.CheckboxSetting;
 
 public final class ParkourHack extends Hack implements UpdateListener
 {
-	private final Minecraft mc = Minecraft.getMinecraft();
+        private final Minecraft mc = Minecraft.getMinecraft();
 
-	private final CheckboxSetting onlyOnGround =
-		new CheckboxSetting("Only while on ground", true);
+        private final CheckboxSetting onlyOnGround =
+                new CheckboxSetting("Only while on ground", true);
 
-	public ParkourHack()
-	{
-		super("Parkour",
-			"Automatically jumps when you are about to walk off a"
-				+ " block. Useful for parkour maps.");
-		setCategory(Category.MOVEMENT);
-		addSetting(onlyOnGround);
-	}
+        public ParkourHack()
+        {
+                super("Parkour",
+                        "Automatically jumps when you are about to walk off a"
+                                + " block. Useful for parkour maps.");
+                setCategory(Category.MOVEMENT);
+                addSetting(onlyOnGround);
+        }
 
-	@Override
-	public void onUpdate()
-	{
-		EntityPlayerSP p = mc.player;
-		if(p == null || mc.world == null)
-			return;
-		if(!p.onGround)
-			return;
-		if(p.isSneaking() || p.isRiding() || p.isInWater())
-			return;
-		if(mc.currentScreen != null)
-			return;
+        @Override
+        public void onUpdate()
+        {
+                EntityPlayerSP p = mc.player;
+                if(p == null || mc.world == null)
+                        return;
+                if(!p.onGround)
+                        return;
+                if(p.isSneaking() || p.isRiding() || p.isInWater())
+                        return;
+                if(mc.currentScreen != null)
+                        return;
 
-		double motionX = p.motionX;
-		double motionZ = p.motionZ;
-		double hSpeed = Math.sqrt(motionX * motionX + motionZ * motionZ);
-		if(hSpeed < 0.1)
-			return;
+                double motionX = p.motionX;
+                double motionZ = p.motionZ;
+                double hSpeed = Math.sqrt(motionX * motionX + motionZ * motionZ);
+                if(hSpeed < 0.1)
+                        return;
 
-		// look ~4 ticks ahead
-		BlockPos ahead = new BlockPos(p.posX + motionX * 4,
-			p.posY - 1, p.posZ + motionZ * 4);
-		if(!mc.world.isAirBlock(ahead))
-			return;
+                // look ~4 ticks ahead
+                BlockPos ahead = new BlockPos(p.posX + motionX * 4,
+                        p.posY - 1, p.posZ + motionZ * 4);
+                if(!mc.world.isAirBlock(ahead))
+                        return;
 
-		// make sure we actually stand on something right now
-		BlockPos below = new BlockPos(p.posX, p.posY - 0.5, p.posZ);
-		if(mc.world.isAirBlock(below))
-			return;
+                // make sure we actually stand on something right now
+                BlockPos below = new BlockPos(p.posX, p.posY - 0.5, p.posZ);
+                if(mc.world.isAirBlock(below))
+                        return;
 
-		p.jump();
-	}
+                // vanilla jump takes off with this velocity (jump() is protected)
+                p.motionY = 0.42F;
+                if(p.isSprinting())
+                {
+                        float yawRad = (float)Math.toRadians(p.rotationYaw);
+                        p.motionX -= Math.sin(yawRad) * 0.2F;
+                        p.motionZ += Math.cos(yawRad) * 0.2F;
+                }
+        }
 }

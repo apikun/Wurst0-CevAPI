@@ -10,7 +10,7 @@ import net.minecraft.init.Items;
 import net.minecraft.inventory.ClickType;
 import net.minecraft.item.ItemStack;
 import net.minecraft.potion.PotionType;
-import net.minecraft.potion.PotionTypes;
+import net.minecraft.init.PotionTypes;
 import net.minecraft.potion.PotionUtils;
 import net.wurst0.Category;
 import net.wurst0.event.listeners.UpdateListener;
@@ -108,7 +108,7 @@ public final class AutoPotionHack extends Hack implements UpdateListener
 		if(rightClickMouseMethod == null)
 			rightClickMouseMethod = ReflectUtils.method(
 				net.minecraft.client.Minecraft.class,
-				"rightClickMouse", "func_71007_j");
+				"rightClickMouse", "func_147121_ag");
 		if(rightClickMouseMethod == null)
 			return;
 		try

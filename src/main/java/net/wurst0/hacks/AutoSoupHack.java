@@ -74,7 +74,7 @@ public final class AutoSoupHack extends Hack implements UpdateListener
 		if(rightClickMouseMethod == null)
 			rightClickMouseMethod = ReflectUtils.method(
 				net.minecraft.client.Minecraft.class,
-				"rightClickMouse", "func_71007_j");
+				"rightClickMouse", "func_147121_ag");
 		if(rightClickMouseMethod == null)
 			return;
 		try

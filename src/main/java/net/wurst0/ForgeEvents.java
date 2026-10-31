@@ -144,8 +144,8 @@ public final class ForgeEvents
                         return;
 
                 WurstClient.INSTANCE.getEventManager()
-                        .fire(new ChunkLoadEvent(event.getChunk().xPosition,
-                                event.getChunk().zPosition));
+                        .fire(new ChunkLoadEvent(event.getChunk().x,
+                                event.getChunk().z));
         }
 
         @SubscribeEvent

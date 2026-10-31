@@ -22,7 +22,7 @@ public final class AntiCactusHack extends Hack implements DamageListener
 	@Override
 	public void onDamage(DamageEvent event)
 	{
-		if(event.getSource() == DamageSource.cactus)
+		if(event.getSource() == DamageSource.CACTUS)
 			event.setCancelled(true);
 	}
 }

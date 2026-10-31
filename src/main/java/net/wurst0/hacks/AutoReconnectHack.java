@@ -5,7 +5,7 @@
 package net.wurst0.hacks;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiConnecting;
+import net.minecraft.client.multiplayer.GuiConnecting;
 import net.minecraft.client.gui.GuiDisconnected;
 import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.util.text.TextComponentString;
