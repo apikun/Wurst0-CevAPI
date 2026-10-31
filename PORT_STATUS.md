@@ -4,28 +4,79 @@ Port of [Wurst7-CevAPI](https://github.com/cev-api/Wurst7-CevAPI)
 (MC 26.3 / Fabric / Java 25) to **Minecraft 1.12.2 / Forge / Java 8**.
 
 - **Branch:** `mc1.12.2` on [apikun/Wurst0-CevAPI](https://github.com/apikun/Wurst0-CevAPI)
-- **Mod id:** `wurst0`  **Package:** `net.wurst0`  **Version:** 0.2.0
+- **Mod id:** `wurst0`  **Package:** `net.wurst0`  **Version:** 0.3.0
 - **License:** GPL-3.0-or-later (unchanged - this is a derivative of Wurst7)
 - **Target:** Forge 1.12.2-14.23.5.2859, MCP `stable_39` mappings, RetroFuturaGradle 2.0.2 + Gradle 9.8.2
 
 ---
 
-## Current state (updated 2026-10-30, v0.2.0 BUILD PASSING + RELEASED)
+## Current state (updated 2026-10-31, v0.3.0 BUILD PASSING + RELEASED)
 
-`gradle build` produces `build/libs/Wurst0-0.2.0.jar` (reobfuscated, drop into
+`gradle build` produces `build/libs/Wurst0-0.3.0.jar` (reobfuscated, drop into
 `.minecraft/mods` with Forge 1.12.2) plus a `-dev` jar for development.
-**v0.2.0 is released on GitHub** with the jar attached (tag `v0.2.0`).
+**v0.3.0 is released on GitHub** with the jar attached (tag `v0.3.0`).
 
 | Item | Count | Status |
 |---|---|---|
 | Hacks registered | 317 | all appear in ClickGUI |
-| Hacks fully implemented | 52 | working logic |
-| Hacks stubbed | 265 | compile + register, no logic yet (`[not ported yet]` in tooltip) |
+| Hacks fully implemented | 77 | working logic |
+| Hacks stubbed | 240 | compile + register, no logic yet (`[not ported yet]` in tooltip) |
 | Commands | 5 | `.help` `.t` `.bind` `.binds` `.say` |
 | ClickGUI | done | RShift, draggable windows, checkboxes/sliders/modes |
 | HUD | done | watermark + enabled-hack arraylist |
 | Config saving | done | `config/wurst0/*.json` (settings + keybinds) |
 | Keybinds | done | `.bind <hack> <key>`, ClickGUI on Right Shift |
+
+### Implemented hacks (v0.3, +27)
+
+| Hack | Category | Notes / limitations |
+|---|---|---|
+| BowAimbot | COMBAT | aims while bow drawn, target leading + drop compensation (approximate) |
+| FightBot | COMBAT | rotates, walks to and attacks nearest target (Killaura filters) |
+| TpAura | COMBAT | packet-level teleport around target via CPacketPlayer.Position + CPacketUseEntity(ATTACK) |
+| MultiAura | COMBAT | up to N targets per cooldown, same filters as Killaura |
+| AutoPotion | COMBAT | splash healing, hotbar or SWAP from inventory, rightClickMouse reflection |
+| AutoArmor | COMBAT | best-armor scan (material + prot enchant), 3-click swap state machine |
+| AntiCactus | BLOCKS | cancels DamageSource.CACTUS via new DamageEvent (LivingHurtEvent bridge) |
+| HandNoClip | BLOCKS | hides hand when eye is inside an opaque block (RenderSpecificHandEvent bridge) |
+| Excavator | BLOCKS | AreaNuker mechanism, digs top-down, per-tick limit |
+| Search | RENDER | cached scan, 8 ore filters, per-ore colors |
+| MobSearch | RENDER | mob spawners + silverfish blocks |
+| Radar | RENDER | screen-space minimap (new ScreenRenderEvent), yaw-rotated dots, category colors |
+| AntiBlind | RENDER | removes blindness/nausea/mining fatigue client-side (server can re-apply) |
+| NewChunks | INTEL | marks chunks first loaded this session via ChunkEvent.Load bridge |
+| NoSlowdown | MOVEMENT | approximate: compensates item-use slowdown with motion boost, capped at sprint speed |
+| Glide | MOVEMENT | fall speed slider |
+| Spider | MOVEMENT | climbs walls on horizontal collision |
+| Jetpack | MOVEMENT | hold jump to fly up |
+| AutoSwim | MOVEMENT | swims up in water |
+| Parkour | MOVEMENT | jumps at block edges (motionY = 0.42, jump() is protected) |
+| AutoFish | OTHER | bite detection via caughtEntity reflection (SRG field_146043_c verified) |
+| AutoReconnect | OTHER | rejoins last server after configurable delay via GuiConnecting |
+| AutoSteal | ITEMS | QUICK_MOVE loop on GuiChest, closes when empty |
+| AutoDrop | ITEMS | junk filter (6 toggles), THROW via windowClick |
+| ChatSpam | CHAT | preset messages + interval + counter (free-text setting still missing) |
+| MassTpa | CHAT | queues /tpa (or /tpahere) for every tab-list player, auto-disables |
+| AntiSpam | CHAT | collapses consecutive repeats into `(xN)` via ChatInputEvent |
+
+### New infrastructure in v0.3
+
+- Six new Wurst events bridged from Forge: `ChatInputEvent`
+  (ClientChatReceivedEvent, mutable/cancellable), `ChatOutputEvent`
+  (ClientChatEvent), `DamageEvent` (LivingHurtEvent), `ScreenRenderEvent`
+  (after HUD), `ChunkLoadEvent` (ChunkEvent.Load), `HandRenderEvent`
+  (RenderSpecificHandEvent). Listener interfaces + EventManager overloads
+  follow the existing hand-rolled dispatcher pattern.
+- **Bugfix:** `rightClickMouse` reflection used a wrong SRG name
+  (`func_71007_j` does not exist in 1.12.2; correct is `func_147121_ag`),
+  so AutoSoup/AutoEat silently did nothing in production jars. All four
+  call sites fixed; verified against `mcp_stable-39` methods.csv.
+- MCP names verified against the actual decompiled sources when in doubt
+  (`build/rfg/srg_patched_minecraft-sources.jar` + fields.csv reverse
+  lookup). Gotchas found this way: `PotionTypes` is in `net.minecraft.init`,
+  `EntityEquipmentSlot` in `net.minecraft.inventory`, `GuiConnecting` in
+  `net.minecraft.client.multiplayer`, `DamageSource.CACTUS` (upper case),
+  `Chunk.x/z` (not xPosition), `EntityLivingBase.jump()` is protected.
 
 ### Implemented hacks (v0.1, 15)
 
