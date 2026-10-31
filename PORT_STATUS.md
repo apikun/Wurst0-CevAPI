@@ -4,23 +4,23 @@ Port of [Wurst7-CevAPI](https://github.com/cev-api/Wurst7-CevAPI)
 (MC 26.3 / Fabric / Java 25) to **Minecraft 1.12.2 / Forge / Java 8**.
 
 - **Branch:** `mc1.12.2` on [apikun/Wurst0-CevAPI](https://github.com/apikun/Wurst0-CevAPI)
-- **Mod id:** `wurst0`  **Package:** `net.wurst0`  **Version:** 0.5.0
+- **Mod id:** `wurst0`  **Package:** `net.wurst0`  **Version:** 0.6.0
 - **License:** GPL-3.0-or-later (unchanged - this is a derivative of Wurst7)
 - **Target:** Forge 1.12.2-14.23.5.2859, MCP `stable_39` mappings, RetroFuturaGradle 2.0.2 + Gradle 9.8.2
 
 ---
 
-## Current state (updated 2026-10-31, v0.5.0 BUILD PASSING + RELEASED)
+## Current state (updated 2026-10-31, v0.6.0 BUILD PASSING + RELEASED)
 
-`gradle build` produces `build/libs/Wurst0-0.5.0.jar` (reobfuscated, drop into
+`gradle build` produces `build/libs/Wurst0-0.6.0.jar` (reobfuscated, drop into
 `.minecraft/mods` with Forge 1.12.2) plus a `-dev` jar for development.
-**v0.5.0 is released on GitHub** with the jar attached (tag `v0.5.0`).
+**v0.6.0 is released on GitHub** with the jar attached (tag `v0.6.0`).
 
 | Item | Count | Status |
 |---|---|---|
 | Hacks registered | 317 | all appear in ClickGUI |
-| Hacks fully implemented | 123 | working logic |
-| Hacks stubbed | 194 | compile + register, no logic yet (`[not ported yet]` in tooltip) |
+| Hacks fully implemented | 153 | working logic |
+| Hacks stubbed | 164 | compile + register, no logic yet (`[not ported yet]` in tooltip) |
 | Commands | 12 | `.help` `.t` `.bind` `.binds` `.say` `.vclip` `.jump` `.gm` `.setmode` `.setslider` `.setcheckbox` `.features` |
 | ClickGUI | done | small-screen adaptive: column layout, wheel scrolling, drag clamp, click-to-front, text fields |
 | HUD | done | watermark + arraylist (capped on small screens) + rainbow option |
@@ -53,6 +53,59 @@ Port of [Wurst7-CevAPI](https://github.com/cev-api/Wurst7-CevAPI)
   (now free-text) and future CommandSpam/AutoChat.
 - `RainbowUi` hooks: ClickGUI title bars + HUD watermark shift hue while
   it is enabled.
+
+### Implemented hacks (v0.6, +29, one reverted)
+
+| Hack | Category | Notes / limitations |
+|---|---|---|
+| Sneak | MOVEMENT | forces isSneaking + movementInput.sneak each tick (vanilla sends C0B); approximate: no input override mixin |
+| CreativeFlight | MOVEMENT | forces capabilities.allowFlying/isFlying + sendPlayerAbilities (C13); vanilla servers push back without permission |
+| InvWalk | MOVEMENT | polls keybinds while a GuiContainer is open (vanilla skips input in GUIs); anvil rename screen excluded |
+| NoClip | MOVEMENT | client-side: noClip + WASD flight; server rubber-bands without spectator/flight perms |
+| ExtraElytra | MOVEMENT | 3-click chestplate swap (slot 6) when elytra below threshold, works GUI-closed |
+| Antisocial | OTHER | inverse Follow: rotates away and walks from players within trigger radius, jumps obstacles |
+| Reach | OTHER | raises the `generic.reachDistance` attribute (EntityPlayer.REACH_DISTANCE) - Forge 1.12.2 routes getBlockReachDistance + getMouseOver through it; restored to 5.0 on disable |
+| PearlDetect | OTHER | warns in chat when a foreign ender pearl flies towards you (dot > 0.85, 3s cooldown) |
+| ItemGenerator | ITEMS | creative only: tops up the held slot via sendSlotPacket (CPacketCreativeInventoryAction, slot+36) |
+| UseItemSpam | ITEMS | rightClickMouse reflection (ReflectCalls) at an interval, optional only-with-item |
+| ClickAura | COMBAT | attacks all valid entities in range per cooldown, no rotation; players/passives filters |
+| BedBreakAura | BLOCKS | closest bed in range via clickBlock/onPlayerDamageBlock + target box render |
+| VeinMiner | BLOCKS | BFS vein collection from the block you mine (8 ore types, 6-connected, limit slider), one dig per tick |
+| Tunneller | BLOCKS | digs eye-then-feet block ahead of the horizontal facing, optional walk-forward, stops on unbreakable |
+| AutoSign | BLOCKS | reflection into GuiEditSign.tileSign + TileEntitySign.signText, sends CPacketUpdateSign and closes; \n separates the 4 lines, Overwrite checkbox |
+| HeadRoll | FUN | sine-wave pitch, yaw kept |
+| MobView | FUN | camera attaches to nearest mob via setRenderViewEntity, restores on disable/despawn |
+| CommandSpam | CHAT | ChatSpam variant sending commands (auto-prepends /), optional counter |
+| Mention | CHAT | gold-highlights chat lines containing your name + XP-orb sound (ENTITY_EXPERIENCE_ORB_PICKUP) |
+| PlayerMute | CHAT | cancels chat lines matching "<Name>" via TextFieldSetting |
+| HealthTags | RENDER | hostile-only name+health billboards, red, through walls (NameTags machinery) |
+| ElytraInfo | RENDER | bottom-right elytra durability + flight speed HUD |
+| NbtSizeCounter | TOOLS | bottom-left NBT size of held item (B/KB/MB from tag.toString) |
+| EntityCount | TOOLS | top-right loaded entity counts (players/hostiles/passives/items), 10-tick refresh |
+| BaseFinder | INTEL | 38-type man-made block set, cached scan, "Underground only" (canSeeSky) filter |
+| CaveFinder | INTEL | dark air pockets (skylight < 8, no sky access), cached scan |
+| RoofEsp | RENDER | nether bedrock roof (y 125-127, dimension -1 check) |
+| WorkstationEsp | RENDER | crafting table/furnace/enchant table/anvil/brewing stand/jukebox/noteblock |
+| LavaWaterEsp | RENDER | lava + optional water highlight through walls |
+| MobSpawnESP | RENDER | solid top + 2 air + block light <= 7 spots (client light data) |
+| CameraDistance | RENDER | **reverted to stub** - see Blockers (const-inlined final field) |
+
+### 1.12.2 findings from the v0.6 round (verified against mcp_patched_minecraft-sources.jar)
+
+- **Reach is an attribute now**: Forge patches `PlayerControllerMP.getBlockReachDistance()` to return
+  `mc.player.getEntityAttribute(EntityPlayer.REACH_DISTANCE)` (default 5.0, `setShouldWatch(true)`),
+  and `EntityRenderer.getMouseOver` uses it for entity crosshair selection. No reflection needed.
+- **CameraDistance is impossible via reflection** (see Blockers): `EntityRenderer.thirdPersonDistance`
+  is `private final` (constant-inlined to 4.0F at every use site) and `updateRenderer()` resets
+  `thirdPersonDistancePrev = 4.0F` every frame before `orientCamera` interpolates towards the
+  inlined literal. Needs a mixin/ASM hook.
+- MCP name gotchas: `GuiRepair` lives in `net.minecraft.client.gui` (NOT gui.inventory),
+  `SoundEvents.ENTITY_EXPERIENCE_ORB_PICKUP` (ENTITY_ prefix), `Blocks.LIT_PUMPKIN` (jack
+  o'lantern) and `Blocks.NOTEBLOCK` (one word, confirmed again).
+- `PlayerControllerMP.getIsHittingBlock()` is public and works as the VeinMiner trigger.
+- `PlayerControllerMP.sendSlotPacket(ItemStack, slot)` sends CPacketCreativeInventoryAction -
+  the clean way to give items in creative.
+- `pearl.getThrower()` returns `EntityLivingBase`, not `EntityPlayer`.
 
 ### Implemented hacks (v0.5, +12)
 
@@ -333,8 +386,12 @@ JDK 8 and caps the Gradle JVM at `-Xmx512M` (4GB sandbox).
 
 ## Blockers
 
-- None. (The v0.4.0 push/release blocker from 2026-10-31 was resolved the
-  same day with a fresh PAT; v0.4.0 and v0.5.0 are both released.)
+- **CameraDistance** needs a mixin/ASM hook (EntityRenderer.thirdPersonDistance is a
+  const-inlined `private final float` in 1.12.2 and updateRenderer() resets
+  thirdPersonDistancePrev to 4.0F every frame; no Forge event fires between the reset
+  and orientCamera). Blocked until the SpongeMixin phase.
+- (The v0.4.0 push/release blocker from 2026-10-31 was resolved the
+  same day with a fresh PAT; v0.4.0-v0.6.0 are all released.)
   Reminder: every PAT that appeared in chat must be revoked and
   regenerated at https://github.com/settings/tokens after use.
 
