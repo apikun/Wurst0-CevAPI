@@ -7,8 +7,12 @@ package net.wurst0.clickgui;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.lwjgl.input.Keyboard;
+import org.lwjgl.opengl.GL11;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
+import net.minecraft.client.gui.ScaledResolution;
 import net.minecraft.client.renderer.GlStateManager;
 import net.wurst0.Category;
 import net.wurst0.WurstClient;
@@ -17,18 +21,32 @@ import net.wurst0.settings.CheckboxSetting;
 import net.wurst0.settings.ModeSetting;
 import net.wurst0.settings.Setting;
 import net.wurst0.settings.SliderSetting;
+import net.wurst0.settings.TextFieldSetting;
+import net.wurst0.settings.TextFieldSetting;
 
 public final class ClickGuiWindow
 {
-        private static final int WIDTH = 106;
-        private static final int TITLE_HEIGHT = 12;
-        private static final int COMPONENT_HEIGHT = 12;
+        static final int WIDTH = 106;
+        static final int TITLE_HEIGHT = 12;
+        static final int COMPONENT_HEIGHT = 12;
+        private static final int MIN_WIDTH = 60;
+        private static final int MIN_VIEW_HEIGHT = 36;
+        private static final int SCROLL_STEP = 15;
 
         private final Category category;
         private final List<Component> components =
                 new ArrayList<Component>();
         private int x;
         private int y;
+        private int width = WIDTH;
+
+        // screen size, updated on every GUI open / window resize
+        private int screenWidth = 320;
+        private int screenHeight = 240;
+        private boolean userMoved;
+
+        // scrolling for when the content is taller than the screen allows
+        private int scrollY;
         private boolean dragging;
         private int dragOffsetX;
         private int dragOffsetY;
@@ -55,15 +73,87 @@ public final class ClickGuiWindow
 
         public int getWidth()
         {
-                return WIDTH;
+                return width;
         }
 
+        /** Height of the whole window as drawn (title + visible content). */
         public int getHeight()
+        {
+                return TITLE_HEIGHT + getViewHeight();
+        }
+
+        /** Full content height, including everything hidden by scrolling. */
+        public int getContentHeight()
         {
                 int height = TITLE_HEIGHT;
                 for(Component c : components)
                         height += c.getHeight();
                 return height;
+        }
+
+        /**
+         * How many pixels of content are visible below the title bar. Capped
+         * to the space between the window top and the bottom of the screen so
+         * windows never run off the bottom edge.
+         */
+        public int getViewHeight()
+        {
+                int content = contentHeight();
+                int avail = screenHeight - (y + TITLE_HEIGHT) - 4;
+                avail = Math.max(MIN_VIEW_HEIGHT, avail);
+                return Math.min(content, avail);
+        }
+
+        private int contentHeight()
+        {
+                int height = 0;
+                for(Component c : components)
+                        height += c.getHeight();
+                return height;
+        }
+
+        private int getMaxScroll()
+        {
+                return Math.max(0, contentHeight() - getViewHeight());
+        }
+
+        /**
+         * Called when the GUI opens or the game window is resized. Adapts the
+         * window width to very small screens and pulls the window back into
+         * the visible area.
+         */
+        public void updateScreenSize(int screenWidth, int screenHeight)
+        {
+                this.screenWidth = screenWidth;
+                this.screenHeight = screenHeight;
+                width = Math.max(MIN_WIDTH, Math.min(WIDTH, screenWidth - 8));
+                clampIntoBounds();
+                scrollY = Math.max(0, Math.min(scrollY, getMaxScroll()));
+        }
+
+        public void clampIntoBounds()
+        {
+                x = Math.max(0, Math.min(x,
+                        Math.max(0, screenWidth - width)));
+                y = Math.max(0, Math.min(y,
+                        Math.max(0, screenHeight - TITLE_HEIGHT)));
+        }
+
+        public void setPosition(int x, int y)
+        {
+                this.x = x;
+                this.y = y;
+        }
+
+        public boolean wasUserMoved()
+        {
+                return userMoved;
+        }
+
+        public boolean contains(int mouseX, int mouseY)
+        {
+                return mouseX >= x && mouseX < x + width && mouseY >= y
+                        && mouseY < y + TITLE_HEIGHT + getViewHeight();
         }
 
         private static FontHelper fr()
@@ -73,32 +163,82 @@ public final class ClickGuiWindow
 
         public void render(int mouseX, int mouseY)
         {
+                int viewHeight = getViewHeight();
+                scrollY = Math.max(0, Math.min(scrollY, getMaxScroll()));
+
                 // window background
-                Gui.drawRect(x, y, x + WIDTH, y + getHeight(), 0xC0101010);
+                Gui.drawRect(x, y, x + width, y + TITLE_HEIGHT + viewHeight,
+                        0xC0101010);
                 // title bar
-                int titleColor = 0xFF000000 | (category.getColor() & 0x3F3F3F)
-                        << 0 | 0xFF1E1E28;
-                titleColor = 0xFF1E1E28;
-                Gui.drawRect(x, y, x + WIDTH, y + TITLE_HEIGHT, titleColor);
-                Gui.drawRect(x, y + TITLE_HEIGHT - 1, x + WIDTH, y + TITLE_HEIGHT,
-                        0xFF000000 | category.getColor());
+                int titleColor = 0xFF1E1E28;
+                if(isRainbowUi())
+                {
+                        float hue = (System.currentTimeMillis() % 4000)
+                                / 4000F;
+                        titleColor = 0xFF000000 | java.awt.Color.HSBtoRGB(
+                                hue, 0.65F, 0.5F);
+                }
+                Gui.drawRect(x, y, x + width, y + TITLE_HEIGHT, titleColor);
+                Gui.drawRect(x, y + TITLE_HEIGHT - 1, x + width,
+                        y + TITLE_HEIGHT, 0xFF000000 | category.getColor());
 
                 fr().drawShadow(category.getName(), x + 3, y + 2, 0xFFFFFFFF);
 
-                // components
-                int cy = y + TITLE_HEIGHT;
+                if(viewHeight <= 0)
+                        return;
+
+                // content, clipped to the window and offset by the scroll
+                enableScissor(x, y + TITLE_HEIGHT, width, viewHeight);
+                int cy = y + TITLE_HEIGHT - scrollY;
                 for(Component c : components)
                 {
-                        c.render(x, cy, mouseX, mouseY);
+                        if(cy + c.getHeight() > y + TITLE_HEIGHT
+                                && cy < y + TITLE_HEIGHT + viewHeight)
+                                c.render(x, cy, mouseX, mouseY);
                         cy += c.getHeight();
                 }
+                disableScissor();
+
+                // scrollbar
+                int maxScroll = getMaxScroll();
+                if(maxScroll > 0)
+                {
+                        int barHeight = Math.max(10, viewHeight * viewHeight
+                                / (viewHeight + maxScroll));
+                        int barY = y + TITLE_HEIGHT + (viewHeight - barHeight)
+                                * scrollY / maxScroll;
+                        Gui.drawRect(x + width - 2, y + TITLE_HEIGHT,
+                                x + width - 1, y + TITLE_HEIGHT + viewHeight,
+                                0x30808080);
+                        Gui.drawRect(x + width - 2, barY, x + width - 1,
+                                barY + barHeight, 0xFF50C0C0);
+                }
+        }
+
+        private static void enableScissor(int sx, int sy, int sw, int sh)
+        {
+                Minecraft mc = Minecraft.getMinecraft();
+                ScaledResolution sr = new ScaledResolution(mc);
+                double f = sr.getScaleFactor();
+                GL11.glEnable(GL11.GL_SCISSOR_TEST);
+                GL11.glScissor((int)Math.floor(sx * f),
+                        (int)Math.floor((sr.getScaledHeight() - sy - sh) * f),
+                        (int)Math.ceil(sw * f), (int)Math.ceil(sh * f));
+        }
+
+        private static void disableScissor()
+        {
+                GL11.glDisable(GL11.GL_SCISSOR_TEST);
         }
 
         public void mouseClicked(int mouseX, int mouseY, int mouseButton)
         {
-                if(mouseX < x || mouseX > x + WIDTH || mouseY < y
-                        || mouseY > y + getHeight())
+                if(!contains(mouseX, mouseY))
                         return;
+
+                // clicking anywhere in the window stops text editing,
+                // the clicked text field re-focuses itself below
+                unfocusTextFields();
 
                 if(mouseY < y + TITLE_HEIGHT)
                 {
@@ -111,12 +251,14 @@ public final class ClickGuiWindow
                         return;
                 }
 
+                // route clicks in virtual (unscrolled) content coordinates
+                int vy = mouseY + scrollY;
                 int cy = y + TITLE_HEIGHT;
                 for(Component c : components)
                 {
-                        if(mouseY >= cy && mouseY < cy + c.getHeight())
+                        if(vy >= cy && vy < cy + c.getHeight())
                         {
-                                c.mouseClicked(mouseX, mouseY, mouseButton);
+                                c.mouseClicked(x, cy, mouseX, vy, mouseButton);
                                 return;
                         }
                         cy += c.getHeight();
@@ -137,19 +279,69 @@ public final class ClickGuiWindow
                 {
                         x = mouseX - dragOffsetX;
                         y = mouseY - dragOffsetY;
+                        clampIntoBounds();
+                        userMoved = true;
                         return;
                 }
 
+                if(!contains(mouseX, mouseY))
+                        return;
+
+                int vy = mouseY + scrollY;
                 int cy = y + TITLE_HEIGHT;
                 for(Component c : components)
                 {
-                        if(mouseY >= cy && mouseY < cy + c.getHeight())
+                        if(vy >= cy && vy < cy + c.getHeight())
                         {
-                                c.mouseClickMove(mouseX, mouseY, clickedButton);
+                                c.mouseClickMove(x, cy, mouseX, vy,
+                                        clickedButton);
                                 return;
                         }
                         cy += c.getHeight();
                 }
+        }
+
+        /**
+         * Scrolls this window if the mouse is over it.
+         *
+         * @return true if the mouse was over this window (stops the event
+         *         from also scrolling windows underneath)
+         */
+        public boolean mouseWheel(int mouseX, int mouseY, int delta)
+        {
+                if(delta == 0 || !contains(mouseX, mouseY))
+                        return false;
+
+                scrollY -= Integer.signum(delta) * SCROLL_STEP;
+                scrollY = Math.max(0, Math.min(scrollY, getMaxScroll()));
+                return true;
+        }
+
+        /**
+         * Routes a key press to the focused text field, if any.
+         *
+         * @return true if a text field consumed the key (the GUI then
+         *         ignores it, e.g. Esc while editing just stops editing)
+         */
+        public boolean keyTyped(char typedChar, int keyCode)
+        {
+                for(Component c : components)
+                        if(c.keyTyped(typedChar, keyCode))
+                                return true;
+                return false;
+        }
+
+        public void unfocusTextFields()
+        {
+                for(Component c : components)
+                        c.unfocusText();
+        }
+
+        private static boolean isRainbowUi()
+        {
+                Hack h = WurstClient.INSTANCE.getHacks()
+                        .getByName("RainbowUi");
+                return h != null && h.isEnabled();
         }
 
         // ==================== components ====================
@@ -158,21 +350,42 @@ public final class ClickGuiWindow
         {
                 abstract int getHeight();
 
+                /**
+                 * Renders the component. wx/wy are the component's top-left
+                 * corner in screen space (already scroll-adjusted).
+                 */
                 abstract void render(int wx, int wy, int mouseX, int mouseY);
 
-                void mouseClicked(int mouseX, int mouseY, int mouseButton)
+                /**
+                 * Handles a click. wx/wy are the component's top-left corner
+                 * in virtual content space; mouseX/mouseY use the same space
+                 * (mouseY already includes the scroll offset).
+                 */
+                void mouseClicked(int wx, int wy, int mouseX, int mouseY,
+                        int mouseButton)
                 {}
 
                 void mouseReleased(int mouseX, int mouseY, int state)
                 {}
 
-                void mouseClickMove(int mouseX, int mouseY, int clickedButton)
+                void mouseClickMove(int wx, int wy, int mouseX, int mouseY,
+                        int clickedButton)
                 {}
 
-                static boolean hovered(int wx, int wy, int mouseX, int mouseY)
+                boolean keyTyped(char typedChar, int keyCode)
                 {
-                        return mouseX >= wx && mouseX < wx + WIDTH && mouseY >= wy
-                                && mouseY < wy + COMPONENT_HEIGHT;
+                        return false;
+                }
+
+                void unfocusText()
+                {}
+
+                static boolean hovered(int w, int wx, int wy, int mouseX,
+                        int mouseY)
+                {
+                        return mouseX >= wx && mouseX < wx + w
+                                && mouseY >= wy && mouseY < wy
+                                        + COMPONENT_HEIGHT;
                 }
         }
 
@@ -196,7 +409,26 @@ public final class ClickGuiWindow
                                         children.add(new SliderComponent((SliderSetting)setting));
                                 else if(setting instanceof ModeSetting)
                                         children.add(new ModeComponent((ModeSetting)setting));
+                                else if(setting instanceof TextFieldSetting)
+                                        children.add(new TextComponent(
+                                                (TextFieldSetting)setting));
                         }
+                }
+
+                @Override
+                boolean keyTyped(char typedChar, int keyCode)
+                {
+                        for(Component c : children)
+                                if(c.keyTyped(typedChar, keyCode))
+                                        return true;
+                        return false;
+                }
+
+                @Override
+                void unfocusText()
+                {
+                        for(Component c : children)
+                                c.unfocusText();
                 }
 
                 @Override
@@ -212,27 +444,29 @@ public final class ClickGuiWindow
                 @Override
                 void render(int wx, int wy, int mouseX, int mouseY)
                 {
-                        boolean hov = hovered(wx, wy, mouseX, mouseY);
+                        boolean hov = hovered(width, wx, wy, mouseX, mouseY);
                         if(hov)
-                                Gui.drawRect(wx, wy, wx + WIDTH, wy + COMPONENT_HEIGHT,
-                                        0x30FFFFFF);
+                                Gui.drawRect(wx, wy, wx + width,
+                                        wy + COMPONENT_HEIGHT, 0x30FFFFFF);
 
                         if(hack.isEnabled())
-                                Gui.drawRect(wx, wy + 2, wx + 2, wy + COMPONENT_HEIGHT - 2,
-                                        0xFF00E000);
+                                Gui.drawRect(wx, wy + 2, wx + 2,
+                                        wy + COMPONENT_HEIGHT - 2, 0xFF00E000);
 
-                        int color = hack.isEnabled() ? 0xFF00FF00 : 0xFFD0D0D0;
+                        int color = hack.isEnabled() ? 0xFF00FF00
+                                : 0xFFD0D0D0;
                         fr().drawShadow(hack.getName(), wx + 5, wy + 2, color);
 
                         if(!children.isEmpty())
-                                fr().drawShadow(expanded ? "-" : "+", wx + WIDTH - 8,
-                                        wy + 2, 0xFF909090);
+                                fr().drawShadow(expanded ? "-" : "+",
+                                        wx + width - 8, wy + 2, 0xFF909090);
 
                         int cy = wy + COMPONENT_HEIGHT;
                         if(expanded)
                         {
                                 Gui.drawRect(wx + 1, cy, wx + 2,
-                                        cy + getHeight() - COMPONENT_HEIGHT, 0xFF303030);
+                                        cy + getHeight() - COMPONENT_HEIGHT,
+                                        0xFF303030);
                                 for(Component c : children)
                                 {
                                         c.render(wx, cy, mouseX, mouseY);
@@ -242,8 +476,27 @@ public final class ClickGuiWindow
                 }
 
                 @Override
-                void mouseClicked(int mouseX, int mouseY, int mouseButton)
+                void mouseClicked(int wx, int wy, int mouseX, int mouseY,
+                        int mouseButton)
                 {
+                        // settings get the click first, so clicking a
+                        // checkbox/slider row no longer toggles the hack
+                        if(expanded)
+                        {
+                                int cy = wy + COMPONENT_HEIGHT;
+                                for(Component c : children)
+                                {
+                                        if(mouseY >= cy
+                                                && mouseY < cy + c.getHeight())
+                                        {
+                                                c.mouseClicked(wx, cy, mouseX,
+                                                        mouseY, mouseButton);
+                                                return;
+                                        }
+                                        cy += c.getHeight();
+                                }
+                        }
+
                         if(mouseButton == 0)
                                 hack.toggle();
                         else if(mouseButton == 1 && !children.isEmpty())
@@ -260,18 +513,22 @@ public final class ClickGuiWindow
                 }
 
                 @Override
-                void mouseClickMove(int mouseX, int mouseY, int clickedButton)
+                void mouseClickMove(int wx, int wy, int mouseX, int mouseY,
+                        int clickedButton)
                 {
                         if(!expanded)
                                 return;
 
-                        int cy = ClickGuiWindow.this.y + TITLE_HEIGHT
-                                + COMPONENT_HEIGHT;
+                        // wx/wy is THIS feature's top, so the children are
+                        // hit-tested from the right origin (was previously
+                        // broken for every feature but the first)
+                        int cy = wy + COMPONENT_HEIGHT;
                         for(Component c : children)
                         {
                                 if(mouseY >= cy && mouseY < cy + c.getHeight())
                                 {
-                                        c.mouseClickMove(mouseX, mouseY, clickedButton);
+                                        c.mouseClickMove(wx, cy, mouseX,
+                                                mouseY, clickedButton);
                                         return;
                                 }
                                 cy += c.getHeight();
@@ -297,25 +554,30 @@ public final class ClickGuiWindow
                 @Override
                 void render(int wx, int wy, int mouseX, int mouseY)
                 {
-                        if(hovered(wx, wy, mouseX, mouseY))
-                                Gui.drawRect(wx, wy, wx + WIDTH, wy + COMPONENT_HEIGHT,
-                                        0x30FFFFFF);
+                        if(hovered(width, wx, wy, mouseX, mouseY))
+                                Gui.drawRect(wx, wy, wx + width,
+                                        wy + COMPONENT_HEIGHT, 0x30FFFFFF);
 
                         // checkbox
-                        Gui.drawRect(wx + 5, wy + 3, wx + 10, wy + 8, 0xFF404040);
+                        Gui.drawRect(wx + 5, wy + 3, wx + 10, wy + 8,
+                                0xFF404040);
                         if(setting.isChecked())
-                                Gui.drawRect(wx + 6, wy + 4, wx + 9, wy + 7, 0xFF00E000);
+                                Gui.drawRect(wx + 6, wy + 4, wx + 9, wy + 7,
+                                        0xFF00E000);
 
-                        fr().drawShadow(setting.getName(), wx + 14, wy + 2, 0xFFD0D0D0);
+                        fr().drawShadow(setting.getName(), wx + 14, wy + 2,
+                                0xFFD0D0D0);
                 }
 
                 @Override
-                void mouseClicked(int mouseX, int mouseY, int mouseButton)
+                void mouseClicked(int wx, int wy, int mouseX, int mouseY,
+                        int mouseButton)
                 {
                         if(mouseButton == 0)
                         {
                                 setting.toggle();
-                                WurstClient.INSTANCE.getFileManager().markDirty();
+                                WurstClient.INSTANCE.getFileManager()
+                                        .markDirty();
                         }
                 }
         }
@@ -339,20 +601,22 @@ public final class ClickGuiWindow
                 @Override
                 void render(int wx, int wy, int mouseX, int mouseY)
                 {
-                        if(hovered(wx, wy, mouseX, mouseY))
-                                Gui.drawRect(wx, wy, wx + WIDTH, wy + COMPONENT_HEIGHT,
-                                        0x30FFFFFF);
+                        if(hovered(width, wx, wy, mouseX, mouseY))
+                                Gui.drawRect(wx, wy, wx + width,
+                                        wy + COMPONENT_HEIGHT, 0x30FFFFFF);
 
                         // slider bar
-                        Gui.drawRect(wx + 5, wy + 9, wx + WIDTH - 5, wy + 10, 0xFF404040);
+                        Gui.drawRect(wx + 5, wy + 9, wx + width - 5, wy + 10,
+                                0xFF404040);
 
                         double fraction =
                                 (setting.getValue() - setting.getMinimum())
-                                        / (setting.getMaximum() - setting.getMinimum());
+                                        / (setting.getMaximum()
+                                                - setting.getMinimum());
                         fraction = Math.max(0, Math.min(1, fraction));
                         Gui.drawRect(wx + 5, wy + 9,
-                                wx + 5 + (int)((WIDTH - 10) * fraction), wy + 10,
-                                0xFF00C0C0);
+                                wx + 5 + (int)((width - 10) * fraction),
+                                wy + 10, 0xFF00C0C0);
 
                         String text = setting.getName() + ": "
                                 + formatValue(setting.getValue());
@@ -367,7 +631,8 @@ public final class ClickGuiWindow
                 }
 
                 @Override
-                void mouseClicked(int mouseX, int mouseY, int mouseButton)
+                void mouseClicked(int wx, int wy, int mouseX, int mouseY,
+                        int mouseButton)
                 {
                         if(mouseButton == 0)
                                 draggingSlider = true;
@@ -382,7 +647,8 @@ public final class ClickGuiWindow
                 }
 
                 @Override
-                void mouseClickMove(int mouseX, int mouseY, int clickedButton)
+                void mouseClickMove(int wx, int wy, int mouseX, int mouseY,
+                        int clickedButton)
                 {
                         if(draggingSlider)
                                 updateValue(mouseX);
@@ -390,11 +656,13 @@ public final class ClickGuiWindow
 
                 private void updateValue(int mouseX)
                 {
-                        double fraction = (double)(mouseX - 5 - ClickGuiWindow.this.x)
-                                / (WIDTH - 10);
+                        double fraction =
+                                (double)(mouseX - 5 - ClickGuiWindow.this.x)
+                                        / (width - 10);
                         fraction = Math.max(0, Math.min(1, fraction));
                         double value = setting.getMinimum()
-                                + fraction * (setting.getMaximum() - setting.getMinimum());
+                                + fraction * (setting.getMaximum()
+                                        - setting.getMinimum());
                         setting.setValue(value);
                 }
         }
@@ -417,22 +685,134 @@ public final class ClickGuiWindow
                 @Override
                 void render(int wx, int wy, int mouseX, int mouseY)
                 {
-                        if(hovered(wx, wy, mouseX, mouseY))
-                                Gui.drawRect(wx, wy, wx + WIDTH, wy + COMPONENT_HEIGHT,
-                                        0x30FFFFFF);
+                        if(hovered(width, wx, wy, mouseX, mouseY))
+                                Gui.drawRect(wx, wy, wx + width,
+                                        wy + COMPONENT_HEIGHT, 0x30FFFFFF);
 
-                        fr().drawShadow(setting.getName() + ": " + setting.getSelected(),
+                        fr().drawShadow(
+                                setting.getName() + ": " + setting.getSelected(),
                                 wx + 5, wy + 2, 0xFFD0D0D0);
                 }
 
                 @Override
-                void mouseClicked(int mouseX, int mouseY, int mouseButton)
+                void mouseClicked(int wx, int wy, int mouseX, int mouseY,
+                        int mouseButton)
                 {
                         if(mouseButton == 0)
                         {
                                 setting.cycle();
-                                WurstClient.INSTANCE.getFileManager().markDirty();
+                                WurstClient.INSTANCE.getFileManager()
+                                        .markDirty();
                         }
+                }
+        }
+
+        private final class TextComponent extends Component
+        {
+                private final TextFieldSetting setting;
+                private boolean editing;
+                private final StringBuilder buffer = new StringBuilder();
+
+                TextComponent(TextFieldSetting setting)
+                {
+                        this.setting = setting;
+                }
+
+                @Override
+                int getHeight()
+                {
+                        return 24;
+                }
+
+                @Override
+                void render(int wx, int wy, int mouseX, int mouseY)
+                {
+                        fr().drawShadow(setting.getName(), wx + 5, wy + 1,
+                                0xFFA0A0A0);
+
+                        Gui.drawRect(wx + 4, wy + 11, wx + width - 4,
+                                wy + 22, editing ? 0xFF303040 : 0xFF202020);
+                        if(editing)
+                                Gui.drawRect(wx + 4, wy + 11, wx + 5,
+                                        wy + 22, 0xFF00C0C0);
+
+                        String text = editing ? buffer.toString()
+                                : setting.getValue();
+
+                        // clip from the left so the end (where you type)
+                        // always stays visible, even on tiny windows
+                        int maxWidth = width - 12;
+                        while(text.length() > 1 && fr()
+                                .getStringWidth(text) > maxWidth)
+                                text = text.substring(1);
+
+                        if(editing
+                                && System.currentTimeMillis() / 500 % 2 == 0)
+                                text = text + "_";
+
+                        fr().drawShadow(text, wx + 6, wy + 13, 0xFFF0F0F0);
+                }
+
+                @Override
+                void mouseClicked(int wx, int wy, int mouseX, int mouseY,
+                        int mouseButton)
+                {
+                        if(mouseButton == 0 && !editing)
+                        {
+                                editing = true;
+                                buffer.setLength(0);
+                                buffer.append(setting.getValue());
+                        }
+                }
+
+                @Override
+                boolean keyTyped(char typedChar, int keyCode)
+                {
+                        if(!editing)
+                                return false;
+
+                        if(keyCode == Keyboard.KEY_RETURN
+                                || keyCode == Keyboard.KEY_ESCAPE)
+                        {
+                                stopEditing();
+                                return true;
+                        }
+
+                        if(keyCode == Keyboard.KEY_BACK)
+                        {
+                                if(buffer.length() > 0)
+                                {
+                                        buffer.setLength(buffer.length() - 1);
+                                        setting.setValue(buffer.toString());
+                                        WurstClient.INSTANCE.getFileManager()
+                                                .markDirty();
+                                }
+                                return true;
+                        }
+
+                        if(typedChar >= ' '
+                                && buffer.length() < setting.getMaxLength())
+                        {
+                                buffer.append(typedChar);
+                                setting.setValue(buffer.toString());
+                                WurstClient.INSTANCE.getFileManager()
+                                        .markDirty();
+                        }
+                        return true;
+                }
+
+                private void stopEditing()
+                {
+                        editing = false;
+                        setting.setValue(buffer.toString());
+                        WurstClient.INSTANCE.getFileManager().markDirty();
+                }
+
+                @Override
+                void unfocusText()
+                {
+                        if(editing)
+                                stopEditing();
                 }
         }
 
@@ -446,6 +826,12 @@ public final class ClickGuiWindow
                         Minecraft.getMinecraft().fontRenderer
                                 .drawStringWithShadow(text, x, y, color);
                         GlStateManager.color(1, 1, 1, 1);
+                }
+
+                int getStringWidth(String text)
+                {
+                        return Minecraft.getMinecraft().fontRenderer
+                                .getStringWidth(text);
                 }
         }
 }

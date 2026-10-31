@@ -31,13 +31,21 @@ public final class Hud
                         return;
 
                 FontRenderer fr = mc.fontRenderer;
+                ScaledResolution sr = new ScaledResolution(mc);
 
-                // watermark, bottom-left
+                // watermark, bottom-left (rainbow when RainbowUi is on)
+                int wmColor = 0x20FF20;
+                Hack rainbowUi = WurstClient.INSTANCE.getHacks()
+                        .getByName("RainbowUi");
+                if(rainbowUi != null && rainbowUi.isEnabled())
+                        wmColor = java.awt.Color.HSBtoRGB(
+                                (System.currentTimeMillis() % 4000) / 4000F,
+                                0.65F, 1F);
+
                 String watermark = "Wurst0 " + WurstClient.VERSION
                         + " (MC " + WurstClient.MC_VERSION + ")";
                 fr.drawStringWithShadow(watermark, 2,
-                        new ScaledResolution(mc).getScaledHeight()
-                                - fr.FONT_HEIGHT - 1, 0x20FF20);
+                        sr.getScaledHeight() - fr.FONT_HEIGHT - 1, wmColor);
 
                 // array of enabled hacks, top-right
                 List<String> enabled = new ArrayList<String>();
@@ -50,17 +58,35 @@ public final class Hud
                         @Override
                         public int compare(String o1, String o2)
                         {
-                                return fr.getStringWidth(o2) - fr.getStringWidth(o1);
+                                return fr.getStringWidth(o2)
+                                        - fr.getStringWidth(o1);
                         }
                 });
 
+                // on small screens / high GUI scales the list is capped so
+                // it can never run past the bottom of the screen
+                int lineHeight = fr.FONT_HEIGHT + 1;
+                int maxLines =
+                        Math.max(1, (sr.getScaledHeight() - 16) / lineHeight);
+                int overflow = enabled.size() - maxLines;
+
                 int y = 2;
-                for(String name : enabled)
+                int shown = overflow > 0 ? maxLines - 1 : enabled.size();
+                for(int i = 0; i < shown; i++)
                 {
-                        int x = new ScaledResolution(mc).getScaledWidth()
-                                - fr.getStringWidth(name) - 2;
+                        String name = enabled.get(i);
+                        int x = sr.getScaledWidth() - fr.getStringWidth(name)
+                                - 2;
                         fr.drawStringWithShadow(name, x, y, 0xF0F0F0);
-                        y += fr.FONT_HEIGHT + 1;
+                        y += lineHeight;
+                }
+
+                if(overflow > 0)
+                {
+                        String more = "+" + (overflow + 1) + " more";
+                        int x = sr.getScaledWidth() - fr.getStringWidth(more)
+                                - 2;
+                        fr.drawStringWithShadow(more, x, y, 0x909090);
                 }
         }
 }

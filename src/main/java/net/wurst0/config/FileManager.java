@@ -29,6 +29,7 @@ import net.wurst0.settings.CheckboxSetting;
 import net.wurst0.settings.ModeSetting;
 import net.wurst0.settings.Setting;
 import net.wurst0.settings.SliderSetting;
+import net.wurst0.settings.TextFieldSetting;
 
 public final class FileManager
 {
@@ -110,6 +111,8 @@ public final class FileManager
                                                 ((SliderSetting)setting).setValue(s.getAsDouble());
                                         else if(setting instanceof ModeSetting)
                                                 ((ModeSetting)setting).setSelected(s.getAsString());
+                                        else if(setting instanceof TextFieldSetting)
+                                                ((TextFieldSetting)setting).setValue(s.getAsString());
                                 }
                         }
                 }catch(Exception e)
@@ -141,6 +144,9 @@ public final class FileManager
                                         else if(setting instanceof ModeSetting)
                                                 hackJson.addProperty(setting.getName(),
                                                         ((ModeSetting)setting).getSelected());
+                                        else if(setting instanceof TextFieldSetting)
+                                                hackJson.addProperty(setting.getName(),
+                                                        ((TextFieldSetting)setting).getValue());
                                 }
 
                                 root.add(hack.getName(), hackJson);

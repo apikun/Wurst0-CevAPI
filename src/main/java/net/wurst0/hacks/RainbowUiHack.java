@@ -1,20 +1,24 @@
 /*
  * Wurst0 - a 1.12.2 port of Wurst7-CevAPI
- * Based on Wurst7 by Alexander01998 (GPL-3.0-or-later)
- * TODO: port logic from net/wurstclient/hacks/RainbowUiHack.java in the original
- * repo (MC 26.3 / Fabric). This stub only registers the hack so it
- * appears in the GUI; it currently does nothing when enabled.
+ * Ported from Wurst7-CevAPI RainbowUiHack (GPL-3.0-or-later)
  */
 package net.wurst0.hacks;
 
 import net.wurst0.Category;
 import net.wurst0.feature.Hack;
 
+/**
+ * The rendering hooks live in ClickGuiWindow (rainbow title bars) and
+ * Hud (rainbow watermark) - they both check for this hack being
+ * enabled and shift the hue over time.
+ */
 public final class RainbowUiHack extends Hack
 {
 	public RainbowUiHack()
 	{
-		super("RainbowUI", "[not ported yet]");
+		super("RainbowUi",
+			"Renders the ClickGUI title bars and the HUD watermark in"
+				+ " rainbow colors.");
 		setCategory(Category.FUN);
 	}
 }

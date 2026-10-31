@@ -10,16 +10,15 @@ import net.wurst0.Category;
 import net.wurst0.event.listeners.UpdateListener;
 import net.wurst0.feature.Hack;
 import net.wurst0.settings.CheckboxSetting;
-import net.wurst0.settings.ModeSetting;
 import net.wurst0.settings.SliderSetting;
+import net.wurst0.settings.TextFieldSetting;
 
 public final class ChatSpamHack extends Hack implements UpdateListener
 {
         private final Minecraft mc = Minecraft.getMinecraft();
 
-        private final ModeSetting message = new ModeSetting("Message",
-                new String[]{"Wurst0 on top!", "gg ez",
-                        "Join the Wurst0 side!"}, 0);
+        private final TextFieldSetting message =
+                new TextFieldSetting("Message", "Wurst0 on top!");
         private final SliderSetting interval =
                 new SliderSetting("Interval (seconds)", 5, 1, 60, 1);
         private final CheckboxSetting addCounter =
@@ -31,8 +30,9 @@ public final class ChatSpamHack extends Hack implements UpdateListener
         public ChatSpamHack()
         {
                 super("ChatSpam",
-                        "Spams a chat message at a fixed interval. Pick one of the"
-                                + " preset messages (free-text input comes later).");
+                        "Spams a chat message at a fixed interval. Set the"
+                                + " text in the Message field (click it, type,"
+                                + " Enter).");
                 setCategory(Category.CHAT);
                 addSettings(message, interval, addCounter);
         }
@@ -48,7 +48,9 @@ public final class ChatSpamHack extends Hack implements UpdateListener
                         return;
                 timer = interval.getValueI() * 20;
 
-                String text = message.getSelected();
+                String text = message.getValue();
+                if(text.isEmpty())
+                        return;
                 if(addCounter.isChecked())
                         text = text + " (" + (++counter) + ")";
 

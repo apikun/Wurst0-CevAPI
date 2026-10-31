@@ -4,28 +4,73 @@ Port of [Wurst7-CevAPI](https://github.com/cev-api/Wurst7-CevAPI)
 (MC 26.3 / Fabric / Java 25) to **Minecraft 1.12.2 / Forge / Java 8**.
 
 - **Branch:** `mc1.12.2` on [apikun/Wurst0-CevAPI](https://github.com/apikun/Wurst0-CevAPI)
-- **Mod id:** `wurst0`  **Package:** `net.wurst0`  **Version:** 0.4.0
+- **Mod id:** `wurst0`  **Package:** `net.wurst0`  **Version:** 0.5.0
 - **License:** GPL-3.0-or-later (unchanged - this is a derivative of Wurst7)
 - **Target:** Forge 1.12.2-14.23.5.2859, MCP `stable_39` mappings, RetroFuturaGradle 2.0.2 + Gradle 9.8.2
 
 ---
 
-## Current state (updated 2026-10-31, v0.4.0 BUILD PASSING + RELEASED)
+## Current state (updated 2026-10-31, v0.5.0 BUILD PASSING + RELEASED)
 
-`gradle build` produces `build/libs/Wurst0-0.4.0.jar` (reobfuscated, drop into
+`gradle build` produces `build/libs/Wurst0-0.5.0.jar` (reobfuscated, drop into
 `.minecraft/mods` with Forge 1.12.2) plus a `-dev` jar for development.
-**v0.4.0 is released on GitHub** with the jar attached (tag `v0.4.0`).
+**v0.5.0 is released on GitHub** with the jar attached (tag `v0.5.0`).
 
 | Item | Count | Status |
 |---|---|---|
 | Hacks registered | 317 | all appear in ClickGUI |
-| Hacks fully implemented | 111 | working logic |
-| Hacks stubbed | 206 | compile + register, no logic yet (`[not ported yet]` in tooltip) |
+| Hacks fully implemented | 123 | working logic |
+| Hacks stubbed | 194 | compile + register, no logic yet (`[not ported yet]` in tooltip) |
 | Commands | 12 | `.help` `.t` `.bind` `.binds` `.say` `.vclip` `.jump` `.gm` `.setmode` `.setslider` `.setcheckbox` `.features` |
-| ClickGUI | done | RShift, draggable windows, checkboxes/sliders/modes |
-| HUD | done | watermark + enabled-hack arraylist |
-| Config saving | done | `config/wurst0/*.json` (settings + keybinds) |
+| ClickGUI | done | small-screen adaptive: column layout, wheel scrolling, drag clamp, click-to-front, text fields |
+| HUD | done | watermark + arraylist (capped on small screens) + rainbow option |
+| Config saving | done | `config/wurst0/*.json` (settings incl. text fields + keybinds) |
 | Keybinds | done | `.bind <hack> <key>`, ClickGUI on Right Shift |
+
+### UI small-screen overhaul (v0.5)
+
+- **Column layout**: windows no longer cascade diagonally off-screen; on
+  every GUI open / resize they are distributed into columns that fit the
+  screen. Windows the user dragged keep their position (clamped into view).
+- **Window scrolling**: content taller than the screen is scrollable with
+  the mouse wheel (scissor-clipped, with a scrollbar). Previously the
+  overflow of big categories (Movement has ~30 hacks) was unreachable.
+- **Adaptive window width** on very small screens; drag is clamped so a
+  window can never be lost off-screen.
+- **Click-to-front** + only the top-most window under the mouse receives a
+  click (overlapping windows no longer double-toggle).
+- **Fixed latent bugs**: clicking a settings row toggled the hack instead
+  of the setting; the slider drag hit-test started from the wrong origin
+  (only the first feature's sliders could be dragged).
+- **HUD**: arraylist is capped to the screen height (`+N more`), so many
+  enabled hacks can't push it off-screen.
+
+### New infrastructure in v0.5
+
+- **Settings phase started**: new `TextFieldSetting` + editable text field
+  widget in the ClickGUI (click row, type, Enter/Esc; Esc while editing
+  doesn't close the GUI). Persisted in settings.json. Unblocks ChatSpam
+  (now free-text) and future CommandSpam/AutoChat.
+- `RainbowUi` hooks: ClickGUI title bars + HUD watermark shift hue while
+  it is enabled.
+
+### Implemented hacks (v0.5, +12)
+
+| Hack | Category | Notes / limitations |
+|---|---|---|
+| ShearAura | OTHER | sheep + mooshrooms, auto-switches to hotbar shears; right-click via vanilla IShearable path |
+| BonemealAura | BLOCKS | hold bonemeal; IGrowable scan + artificial raytrace (same as Tillaura); no MultiMeal option yet |
+| Follow | MOVEMENT | nearest player, keep-distance slider, rotate+walk, jumps when blocked; pauses in GUIs |
+| MobHealth | RENDER | crosshair entity `Name: HP / Max` under the crosshair; hostile-only filter |
+| SignEsp | RENDER | cached scan (40 ticks) of standing + wall signs, like PortalESP |
+| LogoutSpots | INTEL | boxes + tracers where players left (max 20/session); no name labels yet (no world-space text) |
+| Kaboom | BLOCKS | START/ABORT dig-packet bursts; Power 1-32; effects toggle gates the effect-triggering packet |
+| NoWeb | MOVEMENT | approximate: undoes the web's 0.25 motion multiplier (capped); server checks apply |
+| Derp | FUN | random head rotation each tick |
+| AntiWobble | RENDER | removes nausea client-side each tick (same mechanism as AntiBlind) |
+| InfiniChat | CHAT | raises the chat input limit to 2000 via reflection (`inputField`/`field_146415_a` verified) |
+| RainbowUi | FUN | rainbow ClickGUI title bars + HUD watermark |
+| ChatSpam (upgrade) | CHAT | preset messages replaced by a free-text TextFieldSetting |
 
 ### Implemented hacks (v0.4, +34)
 
@@ -223,19 +268,23 @@ Port of [Wurst7-CevAPI](https://github.com/cev-api/Wurst7-CevAPI)
      Flight PacketFly
    - `Block.isOpaqueCube` for true X-Ray block hiding
    - `EntityPlayerSP` / `PlayerControllerMP` hooks for reach, simultaneous
-     multi-block breaking (real AreaNuker), Sneak without slowdown, NoWeb,
-     XCarry, fire/water overlay removal (NoOverlay completeness), true
-     NoFog (linear fog)
-2. **Settings phase** - add a free-text setting type (TextFieldSetting +
-   ClickGUI widget); unblocks: ChatSpam free text, CommandSpam, WebhookAlert,
-   AutoChat
+     multi-block breaking (real AreaNuker), Sneak without slowdown, NoWeb
+     (real), XCarry, fire/water overlay removal (NoOverlay completeness),
+     true NoFog (linear fog)
+   - `GuiScreen.drawDefaultBackground` for NoBackground (1.12.2 Forge's
+     `BackgroundDrawnEvent` fires AFTER the background is drawn, so it
+     cannot be cancelled - confirmed this session)
+2. **Settings phase (continued)** - FileSetting (unblocks ChatSpam
+   use-file + CommandSpam), ButtonSetting; rest of the ClickGUI polish
 3. **World/Player leftovers** - InventorySorter, Tunneller, TreeBot-lite,
-   BonemealAura, ShearAura, Excavator polish, AutoSwitch
-4. **Render leftovers** - BaseFinder, MobSpawnESP, Waypoints, LogoutSpots,
-   SignESP (needs world-space text), HealthTags, MobOwners, CameraDistance
+   AutoSwitch, Waypoints (needs commands + persistence),
+   Excavator polish
+4. **Render leftovers** - BaseFinder, MobSpawnESP, HealthTags,
+   MobOwners, CameraDistance, world-space text (unblocks SignESP labels,
+   LogoutSpots names, Waypoints)
 5. **Combat leftovers** - CrystalAura-lite (no crystals in 1.12.2 PvP - skip
    or adapt), TriggerBot upgrades, AntiProjectile
-6. **Chat/Intel/Items/Fun/Other** - rest of the ~200 stubs
+6. **Chat/Intel/Items/Fun/Other** - rest of the ~194 stubs
 7. Port `other_features` (Wurst-level features like TooManyHax protections)
 
 ## Build
@@ -273,23 +322,21 @@ JDK 8 and caps the Gradle JVM at `-Xmx512M` (4GB sandbox).
 - A full clean build takes ~10 min (one-time decompile/recompile of Minecraft
   is cached in the `-g` gradle home; on a reset sandbox it re-runs).
 
-## Release process (used for v0.2.0-v0.4.0)
+## Release process (used for v0.2.0-v0.5.0)
 
 1. Bump `version` in `build.gradle` (and `mcmod.info` is expanded from it).
 2. `gradle build` -> verify `build/libs/Wurst0-<v>.jar`.
 3. Commit + push `mc1.12.2`, tag `v<v>`, push tag.
-4. Create the GitHub release via API (token from the origin remote URL -
+4. Create the GitHub release via API (token from the environment -
    never store it in files) and upload the jar via the uploads API.
+   See `devtools/release_v050.sh`.
 
 ## Blockers
 
-- **2026-10-31 (v0.4.0):** the PAT previously embedded in the fork's remote
-  URL is gone from the sandbox (remote is clean). Commit + tag are local;
-  push + GitHub release are pending a fresh token. Run
-  `GITHUB_TOKEN=<PAT> bash devtools/release_v040.sh` to finish (it pushes
-  the branch + tag and uploads the jar - token is never stored).
-  Reminder: the old PAT was exposed in chat and must be revoked at
-  https://github.com/settings/tokens.
+- None. (The v0.4.0 push/release blocker from 2026-10-31 was resolved the
+  same day with a fresh PAT; v0.4.0 and v0.5.0 are both released.)
+  Reminder: every PAT that appeared in chat must be revoked and
+  regenerated at https://github.com/settings/tokens after use.
 
 ## Sandbox / environment notes
 
