@@ -281,6 +281,16 @@ JDK 8 and caps the Gradle JVM at `-Xmx512M` (4GB sandbox).
 4. Create the GitHub release via API (token from the origin remote URL -
    never store it in files) and upload the jar via the uploads API.
 
+## Blockers
+
+- **2026-10-31 (v0.4.0):** the PAT previously embedded in the fork's remote
+  URL is gone from the sandbox (remote is clean). Commit + tag are local;
+  push + GitHub release are pending a fresh token. Run
+  `GITHUB_TOKEN=<PAT> bash devtools/release_v040.sh` to finish (it pushes
+  the branch + tag and uploads the jar - token is never stored).
+  Reminder: the old PAT was exposed in chat and must be revoked at
+  https://github.com/settings/tokens.
+
 ## Sandbox / environment notes
 
 - `repo1.maven.org` 429s aggressively from shared CI egress IPs; even the
