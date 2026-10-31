@@ -6,13 +6,26 @@ package net.wurst0;
 
 import org.lwjgl.input.Keyboard;
 
+import net.minecraft.util.text.ITextComponent;
+import net.minecraft.util.text.TextComponentString;
+import net.minecraftforge.client.event.ClientChatEvent;
+import net.minecraftforge.client.event.ClientChatReceivedEvent;
+import net.minecraftforge.client.event.RenderSpecificHandEvent;
+import net.minecraftforge.event.entity.living.LivingHurtEvent;
+import net.minecraftforge.event.world.ChunkEvent;
 import net.minecraftforge.fml.common.gameevent.InputEvent.KeyInputEvent;
 import net.minecraftforge.client.event.RenderGameOverlayEvent;
 import net.minecraftforge.client.event.RenderWorldLastEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent;
+import net.wurst0.event.events.ChatInputEvent;
+import net.wurst0.event.events.ChatOutputEvent;
+import net.wurst0.event.events.ChunkLoadEvent;
+import net.wurst0.event.events.DamageEvent;
+import net.wurst0.event.events.HandRenderEvent;
 import net.wurst0.event.events.KeyEvent;
 import net.wurst0.event.events.RenderEvent;
+import net.wurst0.event.events.ScreenRenderEvent;
 import net.wurst0.event.events.UpdateEvent;
 
 public final class ForgeEvents
@@ -71,5 +84,82 @@ public final class ForgeEvents
                         return;
 
                 WurstClient.INSTANCE.getHud().render(event.getPartialTicks());
+                WurstClient.INSTANCE.getEventManager()
+                        .fire(new ScreenRenderEvent(event.getPartialTicks()));
         }
+
+        @SubscribeEvent
+        public void onChatReceived(ClientChatReceivedEvent event)
+        {
+                if(mc.player == null)
+                        return;
+
+                ChatInputEvent wurstEvent = new ChatInputEvent(
+                        event.getMessage().getFormattedText());
+                WurstClient.INSTANCE.getEventManager().fire(wurstEvent);
+
+                if(wurstEvent.isCancelled())
+                        event.setCanceled(true);
+                else if(!wurstEvent.getText()
+                        .equals(event.getMessage().getFormattedText()))
+                        event.setMessage(
+                                (ITextComponent)new TextComponentString(
+                                        wurstEvent.getText()));
+        }
+
+        @SubscribeEvent
+        public void onChatSent(ClientChatEvent event)
+        {
+                ChatOutputEvent wurstEvent =
+                        new ChatOutputEvent(event.getMessage());
+                WurstClient.INSTANCE.getEventManager().fire(wurstEvent);
+
+                if(wurstEvent.isCancelled())
+                        event.setCanceled(true);
+                else if(!wurstEvent.getText().equals(event.getMessage()))
+                        event.setMessage(wurstEvent.getText());
+        }
+
+        @SubscribeEvent
+        public void onLivingHurt(LivingHurtEvent event)
+        {
+                if(mc.player == null || event.getEntity() != mc.player)
+                        return;
+
+                DamageEvent wurstEvent = new DamageEvent(event.getSource(),
+                        event.getAmount());
+                WurstClient.INSTANCE.getEventManager().fire(wurstEvent);
+
+                if(wurstEvent.isCancelled())
+                        event.setCanceled(true);
+                else if(wurstEvent.getAmount() != event.getAmount())
+                        event.setAmount(wurstEvent.getAmount());
+        }
+
+        @SubscribeEvent
+        public void onChunkLoad(ChunkEvent.Load event)
+        {
+                if(mc.world == null
+                        || event.getChunk().getWorld() != mc.world)
+                        return;
+
+                WurstClient.INSTANCE.getEventManager()
+                        .fire(new ChunkLoadEvent(event.getChunk().xPosition,
+                                event.getChunk().zPosition));
+        }
+
+        @SubscribeEvent
+        public void onHandRender(RenderSpecificHandEvent event)
+        {
+                if(mc.player == null)
+                        return;
+
+                HandRenderEvent wurstEvent = new HandRenderEvent();
+                WurstClient.INSTANCE.getEventManager().fire(wurstEvent);
+                if(wurstEvent.isCancelled())
+                        event.setCanceled(true);
+        }
+
+        private final net.minecraft.client.Minecraft mc =
+                net.minecraft.client.Minecraft.getMinecraft();
 }

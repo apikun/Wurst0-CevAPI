@@ -1,20 +1,28 @@
 /*
  * Wurst0 - a 1.12.2 port of Wurst7-CevAPI
- * Based on Wurst7 by Alexander01998 (GPL-3.0-or-later)
- * TODO: port logic from net/wurstclient/hacks/AntiCactusHack.java in the original
- * repo (MC 26.3 / Fabric). This stub only registers the hack so it
- * appears in the GUI; it currently does nothing when enabled.
+ * Ported from Wurst7-CevAPI AntiCactusHack (GPL-3.0-or-later)
  */
 package net.wurst0.hacks;
 
+import net.minecraft.util.DamageSource;
 import net.wurst0.Category;
+import net.wurst0.event.events.DamageEvent;
+import net.wurst0.event.listeners.DamageListener;
 import net.wurst0.feature.Hack;
 
-public final class AntiCactusHack extends Hack
+public final class AntiCactusHack extends Hack implements DamageListener
 {
 	public AntiCactusHack()
 	{
-		super("AntiCactus", "[not ported yet]");
+		super("AntiCactus",
+			"Prevents you from taking damage from cacti.");
 		setCategory(Category.BLOCKS);
+	}
+
+	@Override
+	public void onDamage(DamageEvent event)
+	{
+		if(event.getSource() == DamageSource.cactus)
+			event.setCancelled(true);
 	}
 }
