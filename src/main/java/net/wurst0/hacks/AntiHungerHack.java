@@ -1,20 +1,45 @@
 /*
  * Wurst0 - a 1.12.2 port of Wurst7-CevAPI
- * Based on Wurst7 by Alexander01998 (GPL-3.0-or-later)
- * TODO: port logic from net/wurstclient/hacks/AntiHungerHack.java in the original
- * repo (MC 26.3 / Fabric). This stub only registers the hack so it
- * appears in the GUI; it currently does nothing when enabled.
+ * Ported from Wurst7-CevAPI AntiHungerHack (GPL-3.0-or-later)
  */
 package net.wurst0.hacks;
 
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.entity.EntityPlayerSP;
+import net.minecraft.network.play.client.CPacketPlayer;
 import net.wurst0.Category;
+import net.wurst0.event.listeners.UpdateListener;
 import net.wurst0.feature.Hack;
 
-public final class AntiHungerHack extends Hack
+/**
+ * Approximate port: sends an extra onGround=true position packet
+ * each tick, which makes the server apply ground friction to the
+ * hunger calculations and reduces exhaustion from jumping/moving.
+ * The sprint-packet suppression part of Wurst7 needs a packet
+ * cancel hook (mixin) and is not implemented yet.
+ */
+public final class AntiHungerHack extends Hack implements UpdateListener
 {
+	private final Minecraft mc = Minecraft.getMinecraft();
+
 	public AntiHungerHack()
 	{
-		super("AntiHunger", "[not ported yet]");
+		super("AntiHunger",
+			"Slows down hunger by faking on-ground status to the"
+				+ " server.");
 		setCategory(Category.MOVEMENT);
+	}
+
+	@Override
+	public void onUpdate()
+	{
+		EntityPlayerSP p = mc.player;
+		if(p == null || mc.isSingleplayer())
+			return;
+		if(p.onGround)
+			return;
+
+		p.connection.sendPacket(new CPacketPlayer.Position(p.posX,
+			p.posY, p.posZ, true));
 	}
 }

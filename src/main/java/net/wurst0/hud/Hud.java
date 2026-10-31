@@ -24,6 +24,12 @@ public final class Hud
                 if(mc.player == null || mc.gameSettings.showDebugInfo)
                         return;
 
+                // HideWurst makes the HUD invisible (screenshots etc.)
+                Hack hideWurst = WurstClient.INSTANCE.getHacks()
+                        .getByName("HideWurst");
+                if(hideWurst != null && hideWurst.isEnabled())
+                        return;
+
                 FontRenderer fr = mc.fontRenderer;
 
                 // watermark, bottom-left

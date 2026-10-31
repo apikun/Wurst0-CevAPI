@@ -11,16 +11,20 @@ import java.util.concurrent.ConcurrentHashMap;
 import net.wurst0.event.events.ChatInputEvent;
 import net.wurst0.event.events.ChatOutputEvent;
 import net.wurst0.event.events.DamageEvent;
+import net.wurst0.event.events.FogEvent;
 import net.wurst0.event.events.HandRenderEvent;
 import net.wurst0.event.events.KeyEvent;
+import net.wurst0.event.events.OverlayEvent;
 import net.wurst0.event.events.RenderEvent;
 import net.wurst0.event.events.ScreenRenderEvent;
 import net.wurst0.event.events.UpdateEvent;
 import net.wurst0.event.listeners.ChatInputListener;
 import net.wurst0.event.listeners.ChatOutputListener;
 import net.wurst0.event.listeners.DamageListener;
+import net.wurst0.event.listeners.FogListener;
 import net.wurst0.event.listeners.HandRenderListener;
 import net.wurst0.event.listeners.KeyPressListener;
+import net.wurst0.event.listeners.OverlayListener;
 import net.wurst0.event.listeners.RenderListener;
 import net.wurst0.event.listeners.ScreenRenderListener;
 import net.wurst0.event.listeners.UpdateListener;
@@ -104,5 +108,19 @@ public final class EventManager
                 for(Object l : listeners)
                         if(l instanceof HandRenderListener)
                                 ((HandRenderListener)l).onHandRender(event);
+        }
+
+        public void fire(OverlayEvent event)
+        {
+                for(Object l : listeners)
+                        if(l instanceof OverlayListener)
+                                ((OverlayListener)l).onOverlayRender(event);
+        }
+
+        public void fire(FogEvent event)
+        {
+                for(Object l : listeners)
+                        if(l instanceof FogListener)
+                                ((FogListener)l).onFogDensity(event);
         }
 }

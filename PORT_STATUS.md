@@ -4,28 +4,88 @@ Port of [Wurst7-CevAPI](https://github.com/cev-api/Wurst7-CevAPI)
 (MC 26.3 / Fabric / Java 25) to **Minecraft 1.12.2 / Forge / Java 8**.
 
 - **Branch:** `mc1.12.2` on [apikun/Wurst0-CevAPI](https://github.com/apikun/Wurst0-CevAPI)
-- **Mod id:** `wurst0`  **Package:** `net.wurst0`  **Version:** 0.3.0
+- **Mod id:** `wurst0`  **Package:** `net.wurst0`  **Version:** 0.4.0
 - **License:** GPL-3.0-or-later (unchanged - this is a derivative of Wurst7)
 - **Target:** Forge 1.12.2-14.23.5.2859, MCP `stable_39` mappings, RetroFuturaGradle 2.0.2 + Gradle 9.8.2
 
 ---
 
-## Current state (updated 2026-10-31, v0.3.0 BUILD PASSING + RELEASED)
+## Current state (updated 2026-10-31, v0.4.0 BUILD PASSING + RELEASED)
 
-`gradle build` produces `build/libs/Wurst0-0.3.0.jar` (reobfuscated, drop into
+`gradle build` produces `build/libs/Wurst0-0.4.0.jar` (reobfuscated, drop into
 `.minecraft/mods` with Forge 1.12.2) plus a `-dev` jar for development.
-**v0.3.0 is released on GitHub** with the jar attached (tag `v0.3.0`).
+**v0.4.0 is released on GitHub** with the jar attached (tag `v0.4.0`).
 
 | Item | Count | Status |
 |---|---|---|
 | Hacks registered | 317 | all appear in ClickGUI |
-| Hacks fully implemented | 77 | working logic |
-| Hacks stubbed | 240 | compile + register, no logic yet (`[not ported yet]` in tooltip) |
-| Commands | 5 | `.help` `.t` `.bind` `.binds` `.say` |
+| Hacks fully implemented | 111 | working logic |
+| Hacks stubbed | 206 | compile + register, no logic yet (`[not ported yet]` in tooltip) |
+| Commands | 12 | `.help` `.t` `.bind` `.binds` `.say` `.vclip` `.jump` `.gm` `.setmode` `.setslider` `.setcheckbox` `.features` |
 | ClickGUI | done | RShift, draggable windows, checkboxes/sliders/modes |
 | HUD | done | watermark + enabled-hack arraylist |
 | Config saving | done | `config/wurst0/*.json` (settings + keybinds) |
 | Keybinds | done | `.bind <hack> <key>`, ClickGUI on Right Shift |
+
+### Implemented hacks (v0.4, +34)
+
+| Hack | Category | Notes / limitations |
+|---|---|---|
+| Freecam | RENDER | fake EntityOtherPlayerMP + setRenderViewEntity; real player frozen via no-op MovementInput swap; WASD+jump/sneak flight, mouse look |
+| NoHurtcam | RENDER | zeroes hurtTime/maxHurtTime each tick (hurtCameraEffect skips when maxHurtTime==0) |
+| NoVignette | RENDER | cancels ElementType.VIGNETTE via new OverlayEvent bridge |
+| NoOverlay | RENDER | pumpkin (HELMET) + portal (PORTAL) overlays; fire/water not separate element types in 1.12.2 |
+| NoFog | RENDER | FogDensity bridge sets density 0; removes liquid fog only (linear distance fog needs mixin) |
+| NoPlayerChat | CHAT | cancels all incoming chat; "Allow own messages" heuristically matches last sent text |
+| NameProtect | CHAT | case-insensitive replace of own name in received chat with "Player" |
+| ProjectileESP | RENDER | boxes around arrows/pearls/potions/snowballs/eggs/xp bottles/fish hooks, per-type colors |
+| PearlESP | RENDER | ender pearl boxes |
+| TrueSight | RENDER | partial: invisible living entities as cyan boxes (barrier vision needs mixin) |
+| NoShieldOverlay | RENDER | cancels RenderSpecificHandEvent when a shield is in either hand |
+| RedstoneESP | RENDER | cached scan of 18 redstone component block types |
+| DurabilityHUD | RENDER | top-left armor + hand durability with color coding (green/yellow/red) |
+| AutoTotem | COMBAT | 3-click offhand swap (slot 45) below health threshold, works GUI-closed |
+| AutoClicker | OTHER | left/right click via shared ReflectCalls (MCP+SRG dual-name reflection) |
+| AntiBlast | OTHER | removes player from ExplosionEvent.Detonate affected entities (damage+knockback immunity in range) |
+| AntiHunger | MOVEMENT | approximate: extra C03 onGround=true packet when airborne; sprint-packet suppression needs mixin |
+| NoLevitation | MOVEMENT | removes client copy of levitation effect each tick (motion is client-simulated) |
+| Dolphin | MOVEMENT | water motion boost |
+| AntiWaterPush | MOVEMENT | approximate: zeroes flow push while standing still in water; optional surface-keep |
+| BoatFly | MOVEMENT | jump/sneak vertical control of ridden boat, hover by default |
+| ElytraFlight | MOVEMENT | Normal/Hover modes; look-direction flight, fall distance cleared (client-simulated physics in 1.12.2) |
+| AntiDrop | ITEMS | ForgeEvents cancels ItemTossEvent (also suppresses the C07 packet) |
+| Restock | ITEMS | refills low hotbar stacks via QUICK_MOVE from main inventory |
+| DuraSwap | ITEMS | swaps nearly-broken tools for a better hotbar twin; self-disables when nothing left |
+| Throw | FUN | drops held stack repeatedly (dropItem(true)) |
+| AutoLeave | OTHER | disconnects below health threshold, back to main menu |
+| FeedAura | OTHER | right-clicks nearest feedable non-love-mode animal with its breeding item (isBreedingItem check) |
+| Tillaura | BLOCKS | hoes dirt/grass via processRightClickBlock with artificial raytrace (no aiming needed) |
+| FancyChat | CHAT | fullwidth unicode rewrite of outgoing chat via ChatOutputEvent |
+| Panic | OTHER | disables every enabled hack, then itself |
+| GlobalToggle | OTHER | keybind-driven Panic (`.bind GlobalToggle <key>`) |
+| HideWurst | OTHER | HUD watermark + arraylist hidden while enabled |
+| ClickGUI | OTHER | opens the ClickGUI (bindable key, Right Shift still hardcoded) |
+
+### New infrastructure in v0.4
+
+- Two new Wurst events: `OverlayEvent` (RenderGameOverlayEvent.Pre bridge,
+  carries the ElementType name) and `FogEvent` (EntityViewRenderEvent.FogDensity
+  bridge, cancelled => custom density).
+- ForgeEvents also bridges `ItemTossEvent` (AntiDrop gate) and
+  `ExplosionEvent.Detonate` (AntiBlast) directly, since both need the Forge
+  event object itself and don't warrant a Wurst event class.
+- `net.wurst0.util.ReflectCalls` - shared cached leftClickMouse/rightClickMouse
+  reflection (MCP `leftClickMouse`/SRG `func_147116_af`,
+  MCP `rightClickMouse`/SRG `func_147121_ag`); AutoClicker uses it.
+- Seven new commands; `.setmode`/`.setslider`/`.setcheckbox` share the
+  feature/setting lookup helpers in SetModeCmd and work on hacks AND commands.
+- 1.12.2 MCP gotchas found this round: `Blocks.NOTEBLOCK` (one word),
+  repeaters/comparators only exist as UNPOWERED_/POWERED_ pairs,
+  EntityEgg/EntityPotion/EntitySnowball live in `entity.projectile` (not item),
+  `Explosion.getPosition()` (no getExploder in MCP 1.12.2),
+  `Util.milliTime()` does not exist (use System.currentTimeMillis),
+  MovementInput is a plain non-abstract class (substitutable for input
+  freezing).
 
 ### Implemented hacks (v0.3, +27)
 
@@ -156,23 +216,26 @@ Port of [Wurst7-CevAPI](https://github.com/cev-api/Wurst7-CevAPI)
 
 ## Roadmap (priority order chosen by apikun)
 
-1. **Hooks/mixins phase** - add SpongeMixin (Mixin 0.7.x) to the build:
+1. **Hooks/mixins phase** - add SpongeMixin (Mixin 0.7.x) to the build
+   (STILL not started - highest priority for next session):
    - `C03PacketPlayer` / `PlayerNetworkHook` for packet-level Velocity, real
-     Speed (stride), Scaffold, Freecam
+     Speed (stride), packet-cancel for AntiHunger (sprint suppression),
+     Flight PacketFly
    - `Block.isOpaqueCube` for true X-Ray block hiding
    - `EntityPlayerSP` / `PlayerControllerMP` hooks for reach, simultaneous
-     multi-block breaking (real AreaNuker)
-2. **Combat leftovers** - BowAimbot, CrystalAura-lite (no crystals in 1.12.2
-   PvP - skip or adapt), FightBot, TriggerBot upgrades, TpAura
-3. **Render priority leftovers** - Search/MobSearch block scans, SkyBuildESP,
-   TunnelHoleStairESP, WardenESP-style, RadarHack, NewChunks
-4. **World/Player leftovers** - Excavator, AutoFish, AutoArmor, AutoSteal,
-   InventorySorter, Tunneller, TreeBot-lite
-5. **Movement leftovers** - Flight PacketFly mode, LongJump, NoSlowdown,
-   ElytraFlight (rewrite for 1.12.2 gliding), SafeWalk (needs mixin or
-   clipAtLedge reflection)
-6. **Chat/Intel/Items/Fun/Other** - rest of the 265 stubs (chat hacks need a
-   ClientChatReceivedEvent bridge in ForgeEvents first)
+     multi-block breaking (real AreaNuker), Sneak without slowdown, NoWeb,
+     XCarry, fire/water overlay removal (NoOverlay completeness), true
+     NoFog (linear fog)
+2. **Settings phase** - add a free-text setting type (TextFieldSetting +
+   ClickGUI widget); unblocks: ChatSpam free text, CommandSpam, WebhookAlert,
+   AutoChat
+3. **World/Player leftovers** - InventorySorter, Tunneller, TreeBot-lite,
+   BonemealAura, ShearAura, Excavator polish, AutoSwitch
+4. **Render leftovers** - BaseFinder, MobSpawnESP, Waypoints, LogoutSpots,
+   SignESP (needs world-space text), HealthTags, MobOwners, CameraDistance
+5. **Combat leftovers** - CrystalAura-lite (no crystals in 1.12.2 PvP - skip
+   or adapt), TriggerBot upgrades, AntiProjectile
+6. **Chat/Intel/Items/Fun/Other** - rest of the ~200 stubs
 7. Port `other_features` (Wurst-level features like TooManyHax protections)
 
 ## Build
@@ -210,14 +273,13 @@ JDK 8 and caps the Gradle JVM at `-Xmx512M` (4GB sandbox).
 - A full clean build takes ~10 min (one-time decompile/recompile of Minecraft
   is cached in the `-g` gradle home; on a reset sandbox it re-runs).
 
-## Release process (used for v0.2.0)
+## Release process (used for v0.2.0-v0.4.0)
 
 1. Bump `version` in `build.gradle` (and `mcmod.info` is expanded from it).
 2. `gradle build` -> verify `build/libs/Wurst0-<v>.jar`.
 3. Commit + push `mc1.12.2`, tag `v<v>`, push tag.
 4. Create the GitHub release via API (token from the origin remote URL -
    never store it in files) and upload the jar via the uploads API.
-   `scripts/release_v020.sh` in the sandbox holds the exact commands.
 
 ## Sandbox / environment notes
 

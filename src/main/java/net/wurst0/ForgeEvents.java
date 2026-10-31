@@ -10,23 +10,29 @@ import net.minecraft.util.text.ITextComponent;
 import net.minecraft.util.text.TextComponentString;
 import net.minecraftforge.client.event.ClientChatEvent;
 import net.minecraftforge.client.event.ClientChatReceivedEvent;
+import net.minecraftforge.client.event.EntityViewRenderEvent;
+import net.minecraftforge.client.event.RenderGameOverlayEvent;
 import net.minecraftforge.client.event.RenderSpecificHandEvent;
+import net.minecraftforge.event.entity.item.ItemTossEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import net.minecraftforge.event.world.ChunkEvent;
-import net.minecraftforge.fml.common.gameevent.InputEvent.KeyInputEvent;
-import net.minecraftforge.client.event.RenderGameOverlayEvent;
-import net.minecraftforge.client.event.RenderWorldLastEvent;
+import net.minecraftforge.event.world.ExplosionEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import net.minecraftforge.fml.common.gameevent.InputEvent.KeyInputEvent;
+import net.minecraftforge.client.event.RenderWorldLastEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent;
 import net.wurst0.event.events.ChatInputEvent;
 import net.wurst0.event.events.ChatOutputEvent;
 import net.wurst0.event.events.ChunkLoadEvent;
 import net.wurst0.event.events.DamageEvent;
+import net.wurst0.event.events.FogEvent;
 import net.wurst0.event.events.HandRenderEvent;
 import net.wurst0.event.events.KeyEvent;
+import net.wurst0.event.events.OverlayEvent;
 import net.wurst0.event.events.RenderEvent;
 import net.wurst0.event.events.ScreenRenderEvent;
 import net.wurst0.event.events.UpdateEvent;
+import net.wurst0.feature.Hack;
 
 public final class ForgeEvents
 {
@@ -158,6 +164,63 @@ public final class ForgeEvents
                 WurstClient.INSTANCE.getEventManager().fire(wurstEvent);
                 if(wurstEvent.isCancelled())
                         event.setCanceled(true);
+        }
+
+        @SubscribeEvent
+        public void onRenderOverlayPre(RenderGameOverlayEvent.Pre event)
+        {
+                if(mc.player == null)
+                        return;
+
+                OverlayEvent wurstEvent = new OverlayEvent(
+                        event.getType().name());
+                WurstClient.INSTANCE.getEventManager().fire(wurstEvent);
+                if(wurstEvent.isCancelled())
+                        event.setCanceled(true);
+        }
+
+        @SubscribeEvent
+        public void onFogDensity(EntityViewRenderEvent.FogDensity event)
+        {
+                if(mc.player == null)
+                        return;
+
+                FogEvent wurstEvent = new FogEvent();
+                WurstClient.INSTANCE.getEventManager().fire(wurstEvent);
+                if(wurstEvent.isCancelled())
+                {
+                        event.setDensity(wurstEvent.getDensity());
+                        event.setCanceled(true);
+                }
+        }
+
+        @SubscribeEvent
+        public void onItemToss(ItemTossEvent event)
+        {
+                if(mc.player == null || event.getPlayer() != mc.player)
+                        return;
+
+                // AntiDrop gate: cancelling here stops both the item spawn
+                // and the C07 drop packet, because the client call chain
+                // (EntityPlayerSP.dropItem -> ForgeHooks.onPlayerTossEvent)
+                // returns null when the event is cancelled.
+                Hack antiDrop = WurstClient.INSTANCE.getHacks()
+                        .getByName("AntiDrop");
+                if(antiDrop != null && antiDrop.isEnabled())
+                        event.setCanceled(true);
+        }
+
+        @SubscribeEvent
+        public void onExplosionDetonate(ExplosionEvent.Detonate event)
+        {
+                if(mc.player == null)
+                        return;
+
+                Hack antiBlast = WurstClient.INSTANCE.getHacks()
+                        .getByName("AntiBlast");
+                if(antiBlast != null && antiBlast.isEnabled())
+                        ((net.wurst0.hacks.AntiBlastHack)antiBlast)
+                                .handleDetonate(event);
         }
 
         private final net.minecraft.client.Minecraft mc =

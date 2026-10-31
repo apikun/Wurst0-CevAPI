@@ -1,20 +1,130 @@
 /*
  * Wurst0 - a 1.12.2 port of Wurst7-CevAPI
- * Based on Wurst7 by Alexander01998 (GPL-3.0-or-later)
- * TODO: port logic from net/wurstclient/hacks/RedstoneEspHack.java in the original
- * repo (MC 26.3 / Fabric). This stub only registers the hack so it
- * appears in the GUI; it currently does nothing when enabled.
+ * Ported from Wurst7-CevAPI RedstoneEspHack (GPL-3.0-or-later)
  */
 package net.wurst0.hacks;
 
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+
+import net.minecraft.block.Block;
+import net.minecraft.block.state.IBlockState;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.entity.EntityPlayerSP;
+import net.minecraft.init.Blocks;
+import net.minecraft.util.math.BlockPos;
 import net.wurst0.Category;
+import net.wurst0.event.events.RenderEvent;
+import net.wurst0.event.listeners.RenderListener;
+import net.wurst0.event.listeners.UpdateListener;
 import net.wurst0.feature.Hack;
+import net.wurst0.render.RenderUtils;
+import net.wurst0.settings.SliderSetting;
 
 public final class RedstoneEspHack extends Hack
+        implements UpdateListener, RenderListener
 {
-	public RedstoneEspHack()
-	{
-		super("RedstoneESP", "[not ported yet]");
-		setCategory(Category.RENDER);
-	}
+        private final Minecraft mc = Minecraft.getMinecraft();
+
+        private final SliderSetting range =
+                new SliderSetting("Range", 16, 8, 48, 4);
+
+        private final List<BlockPos> found = new ArrayList<BlockPos>();
+        private int scanTimer;
+        private net.minecraft.world.World lastWorld;
+
+        public RedstoneEspHack()
+        {
+                super("RedstoneESP",
+                        "Highlights redstone components through walls so you can"
+                                + " inspect contraptions.");
+                setCategory(Category.RENDER);
+                addSetting(range);
+        }
+
+        private static boolean isRedstone(Block block)
+        {
+                return block == Blocks.REDSTONE_WIRE
+                        || block == Blocks.REDSTONE_TORCH
+                        || block == Blocks.UNLIT_REDSTONE_TORCH
+                        || block == Blocks.REDSTONE_BLOCK
+                        || block == Blocks.UNPOWERED_REPEATER
+                        || block == Blocks.POWERED_REPEATER
+                        || block == Blocks.UNPOWERED_COMPARATOR
+                        || block == Blocks.POWERED_COMPARATOR
+                        || block == Blocks.PISTON
+                        || block == Blocks.STICKY_PISTON
+                        || block == Blocks.DISPENSER
+                        || block == Blocks.DROPPER
+                        || block == Blocks.HOPPER
+                        || block == Blocks.LEVER
+                        || block == Blocks.NOTEBLOCK
+                        || block == Blocks.OBSERVER
+                        || block == Blocks.REDSTONE_LAMP
+                        || block == Blocks.LIT_REDSTONE_LAMP;
+        }
+
+        @Override
+        public void onUpdate()
+        {
+                EntityPlayerSP p = mc.player;
+                if(p == null || mc.world == null)
+                        return;
+
+                if(mc.world != lastWorld)
+                {
+                        lastWorld = mc.world;
+                        scanTimer = 0;
+                }
+
+                if(--scanTimer > 0)
+                        return;
+                scanTimer = 40;
+
+                found.clear();
+                int r = Math.min(range.getValueI(), 32);
+                BlockPos center = new BlockPos(p.posX, p.posY, p.posZ);
+                Iterator<BlockPos> itr = BlockPos.getAllInBox(
+                        center.add(-r, -r, -r), center.add(r, r, r)).iterator();
+
+                while(itr.hasNext())
+                {
+                        BlockPos pos = itr.next();
+                        IBlockState state = mc.world.getBlockState(pos);
+                        if(isRedstone(state.getBlock()))
+                                found.add(pos);
+                }
+        }
+
+        @Override
+        public void onRender(float partialTicks)
+        {
+                if(mc.player == null || mc.world == null || found.isEmpty())
+                        return;
+
+                RenderUtils.enable3D(1.5F, false);
+                RenderUtils.applyCameraTransform(partialTicks);
+
+                for(BlockPos pos : found)
+                        RenderUtils.drawBox(new net.minecraft.util.math.AxisAlignedBB(
+                                pos.getX(), pos.getY(), pos.getZ(),
+                                pos.getX() + 1, pos.getY() + 1, pos.getZ() + 1),
+                                1F, 0.4F, 0.1F, 0.5F);
+
+                RenderUtils.disable3D(false);
+        }
+
+        @Override
+        protected void onEnable()
+        {
+                scanTimer = 0;
+                found.clear();
+        }
+
+        @Override
+        protected void onDisable()
+        {
+                found.clear();
+        }
 }
