@@ -49,8 +49,11 @@ public final class Hud
 
                 // array of enabled hacks, top-right
                 List<String> enabled = new ArrayList<String>();
+                net.wurst0.hacks.TooManyHaxHack tooManyHax = (net.wurst0.hacks.TooManyHaxHack)WurstClient.INSTANCE
+					.getHacks().getByName("TooManyHax");
                 for(Hack hack : WurstClient.INSTANCE.getHacks().getList())
-                        if(hack.isEnabled())
+                        if(hack.isEnabled()
+                        		&& (tooManyHax == null || !tooManyHax.isHiddenEverywhere(hack.getName())))
                                 enabled.add(hack.getName());
 
                 Collections.sort(enabled, new Comparator<String>()

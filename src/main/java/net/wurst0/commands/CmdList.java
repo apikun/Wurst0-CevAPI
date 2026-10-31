@@ -25,10 +25,11 @@ public final class CmdList
         public final SetSliderCmd setslider = new SetSliderCmd();
         public final SetCheckboxCmd setcheckbox = new SetCheckboxCmd();
         public final FeaturesCmd features = new FeaturesCmd();
+        public final WaypointsCmd wp = new WaypointsCmd();
 
         private final List<Command> cmds =
                 Arrays.asList(help, t, bind, binds, say, vclip, jump, gm,
-                        setmode, setslider, setcheckbox, features);
+                        setmode, setslider, setcheckbox, features, wp);
 
         public List<Command> getList()
         {

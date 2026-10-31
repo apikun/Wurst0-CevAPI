@@ -10,6 +10,7 @@ import java.util.List;
 import net.wurst0.Category;
 import net.wurst0.feature.Hack;
 import net.wurst0.hacks.Hacks;
+import net.wurst0.WurstClient;
 
 public final class ClickGuiManager
 {
@@ -23,10 +24,12 @@ public final class ClickGuiManager
                         if(category == Category.FAVORITES || category == Category.COMMANDS)
                                 continue;
 
-                        List<Hack> categoryHacks = new ArrayList<Hack>();
+                        List<Hack> categoryHacks = new ArrayList<Hack>();net.wurst0.hacks.TooManyHaxHack tooManyHax = (net.wurst0.hacks.TooManyHaxHack)WurstClient.INSTANCE
+						.getHacks().getByName("TooManyHax");
                         for(Hack hack : hacks.getList())
-                                if(hack.getCategory() == category)
-                                        categoryHacks.add(hack);
+                        	if(hack.getCategory() == category
+                        			&& (tooManyHax == null || !tooManyHax.isHidden(hack.getName())))
+                        		categoryHacks.add(hack);
 
                         if(categoryHacks.isEmpty())
                                 continue;

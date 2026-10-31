@@ -1,27 +1,81 @@
+---
+
+## Implemented hacks (v0.7, +31)
+
+| Hack | Category | Notes / limitations |
+|---|---|---|
+| SafeWalk | MOVEMENT | zeroes horizontal motion when the predicted next position has no support; optional sneak-at-edge flag (original patches the sneaking collision via mixin) |
+| AntiEntityPush | MOVEMENT | cancels small horizontal kicks while standing still next to a living entity (collision push is re-applied client-side by vanilla) |
+| ClutchFall | MOVEMENT | auto water-bucket MLG: swaps to hotbar water bucket at fall threshold, artificial raytrace places on first solid block below, swaps back after landing |
+| AutoLoot | ITEMS | walks to the closest dropped item (rotate + movement input), jumps on horizontal collision / item above; pauses in GUIs |
+| AntiBreak | ITEMS | aborts dig + warns when the held tool is within N uses of breaking (threshold slider) |
+| KillPotion | ITEMS | creative-only: replaces held slot with Instant Damage (amp 124) + optional Wither potion via CPacketCreativeInventoryAction; drinkable/splash/lingering |
+| TrollPotion | ITEMS | creative-only: 13-effect mixed potion (Speed/Haste/Strength/Jump/Regen/Resistance/FireRes/WaterBreathing/NightVision/HealthBoost/Absorption/Glowing/Luck) |
+| Liquids | BLOCKS | re-raytraces with liquids on RightClickEmpty and sends the right-click on the water/lava block (source blocks are replaceable for placement) |
+| InstantBunker | BLOCKS | 2x2 wall ring (2 high) + optional roof, one block per tick, support-face detection, auto-switch, restores slot |
+| AirMiner | OTHER | Nuker-style dig of the closest breakable block in a small sphere around the player, N blocks/tick, no aiming needed |
+| CrystalAura | COMBAT | attacks every EntityEnderCrystal in range on cooldown, LOS check, red-magenta target box render; no auto-placement |
+| AntiProjectile | COMBAT | punches fireballs + shulker bullets that fly towards you (motion dot-product check) on cooldown |
+| ForceOp | TOOLS | tries comma-separated password list on an interval (Login / Register / Say modes), stop-after-list option |
+| AutoChat | CHAT | rotates (or randomizes) "|" separated messages on an interval |
+| InstantCommand | CHAT | sends a command N seconds after every server join (leading slash optional) |
+| StaffMonitor | CHAT | polls the tab list every second, chat+sound alert when a joining name matches a comma-separated pattern list (or every join) |
+| DamageESP | RENDER | orange box (through walls) around entities with hurtTime > 0 |
+| DamageDetect | OTHER | chat lines when nearby entities take damage (health delta) or die; 3s per-entity cooldown |
+| PlayerSonar | INTEL | periodic chat ping listing players in range with distance + compass direction |
+| MobOwners | RENDER | "Owner: <name>" billboard above tamed animals; resolves via getOwner() or tab-list UUID lookup, short-UUID fallback |
+| MeasurementESP | RENDER | distance player-locked-point -> crosshair block/entity; 3D line, screen-space readout under crosshair, marker box at A |
+| ArrowDMG | COMBAT | multiplies own arrows' motion right after bow release (reflection into EntityArrow.shootingEntity, velocityChanged=true); strict servers may reject |
+| SkyBuildESP | RENDER | column heightmap scan above Y threshold (sky bases), 40-tick cache, optional chat alerts |
+| SurfaceXray | RENDER | X-Ray variant: only ores with canSeeSky on the block above (exposed ores) |
+| NoPumpkin | RENDER | cancels the HELMET overlay only when a carved pumpkin is worn (NoOverlay cancels it always) |
+| ServerIntel | INTEL | top-center HUD: server brand, IP, dimension, difficulty |
+| GameStats | TOOLS | top-center HUD: FPS (Minecraft.getDebugFPS), own ping (NetworkPlayerInfo.getResponseTime), optional brand; font scale |
+| SoundMute | RENDER | PlaySoundEvent bridge (ForgeEvents) mutes sounds whose ResourceLocation path contains a comma-separated pattern |
+| WebhookAlert | OTHER | Discord webhook (background thread, JSON-escaped): chat mentions (alias list) + players entering range |
+| TooManyHax | OTHER | hides comma-listed hacks from the ClickGUI; "Hide only" keeps them in the HUD arraylist (filters in ClickGuiManager + Hud) |
+| Waypoints | RENDER | tracers + labels + boxes to waypoints; persisted as a TextFieldSetting ("name x y z;..."); new `.wp add/del/list` command |
+
+### New infrastructure in v0.7
+
+- Two new Forge bridges in ForgeEvents: `PlaySoundEvent` (SoundMute) and
+  `PlayerInteractEvent.RightClickEmpty` (Liquids), following the AntiDrop/AntiBlast
+  direct-hook pattern (no new Wurst event classes needed).
+- TooManyHax filters wired into both the ClickGUI window builder and the HUD arraylist.
+- 13th command: `.wp` (WaypointsCmd) edits the Waypoints text field and marks config dirty.
+
+### Environment notes discovered this round
+
+- `devtools/patch_rfg_heap.py` DID match (`.../mcp/DecompileTask.class` endswith check is fine),
+  but during setup the download of `rfg-orig.jar` had not finished, so the published jar was the
+  UNPATCHED copy -> decompiler worker OOM (exit 137). Re-running the patch manually fixed it.
+- The localmaven RFG directory was also missing `retrofuturagradle-2.0.2.pom`; without it Gradle
+  silently falls back to the GTNH jar (see v0.2 notes). Both are now fetched in the right order.
+
 # Wurst0 - 1.12.2 Port Status
 
 Port of [Wurst7-CevAPI](https://github.com/cev-api/Wurst7-CevAPI)
 (MC 26.3 / Fabric / Java 25) to **Minecraft 1.12.2 / Forge / Java 8**.
 
 - **Branch:** `mc1.12.2` on [apikun/Wurst0-CevAPI](https://github.com/apikun/Wurst0-CevAPI)
-- **Mod id:** `wurst0`  **Package:** `net.wurst0`  **Version:** 0.6.0
+- **Mod id:** `wurst0`  **Package:** `net.wurst0`  **Version:** 0.7.0
 - **License:** GPL-3.0-or-later (unchanged - this is a derivative of Wurst7)
 - **Target:** Forge 1.12.2-14.23.5.2859, MCP `stable_39` mappings, RetroFuturaGradle 2.0.2 + Gradle 9.8.2
 
 ---
 
-## Current state (updated 2026-10-31, v0.6.0 BUILD PASSING + RELEASED)
+## Current state (updated 2026-10-31, v0.7.0 BUILD PASSING + RELEASED)
 
-`gradle build` produces `build/libs/Wurst0-0.6.0.jar` (reobfuscated, drop into
+`gradle build` produces `build/libs/Wurst0-0.7.0.jar` (reobfuscated, drop into
 `.minecraft/mods` with Forge 1.12.2) plus a `-dev` jar for development.
-**v0.6.0 is released on GitHub** with the jar attached (tag `v0.6.0`).
+**v0.7.0 is released on GitHub** with the jar attached (tag `v0.7.0`).
 
 | Item | Count | Status |
 |---|---|---|
-| Hacks registered | 317 | all appear in ClickGUI |
-| Hacks fully implemented | 153 | working logic |
-| Hacks stubbed | 164 | compile + register, no logic yet (`[not ported yet]` in tooltip) |
-| Commands | 12 | `.help` `.t` `.bind` `.binds` `.say` `.vclip` `.jump` `.gm` `.setmode` `.setslider` `.setcheckbox` `.features` |
+| Hacks registered | 308 | all appear in ClickGUI |
+| Hacks fully implemented | 183 | working logic (59% of registry) |
+| Hacks stubbed | 125 | compile + register, no logic yet (`[not ported yet]` in tooltip) |
+| Commands | 13 | `.help` `.t` `.bind` `.binds` `.say` `.vclip` `.jump` `.gm` `.setmode` `.setslider` `.setcheckbox` `.features` `.wp` |
 | ClickGUI | done | small-screen adaptive: column layout, wheel scrolling, drag clamp, click-to-front, text fields |
 | HUD | done | watermark + arraylist (capped on small screens) + rainbow option |
 | Config saving | done | `config/wurst0/*.json` (settings incl. text fields + keybinds) |
