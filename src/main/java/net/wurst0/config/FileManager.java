@@ -318,12 +318,61 @@ public final class FileManager
         }
 
         /**
+         * Loads which ClickGUI windows were collapsed (title-bar only).
+         * Returns an empty map if the file is missing or unreadable.
+         */
+        public Map<String, Boolean> loadClickGuiCollapsed()
+        {
+                Map<String, Boolean> collapsed = new HashMap<String, Boolean>();
+                if(!clickGuiFile.isFile())
+                        return collapsed;
+
+                try
+                {
+                        BufferedReader reader =
+                                new BufferedReader(new InputStreamReader(
+                                        new FileInputStream(clickGuiFile), StandardCharsets.UTF_8));
+                        JsonElement element = new JsonParser().parse(reader);
+                        reader.close();
+
+                        if(element == null || !element.isJsonObject())
+                                return collapsed;
+
+                        for(Entry<String, JsonElement> e : element
+                                .getAsJsonObject().entrySet())
+                        {
+                                if(!e.getValue().isJsonObject())
+                                        continue;
+                                JsonObject pos = e.getValue().getAsJsonObject();
+                                if(pos.has("collapsed"))
+                                {
+                                        try
+                                        {
+                                                collapsed.put(e.getKey(),
+                                                        pos.get("collapsed").getAsBoolean());
+                                        }catch(Exception ex)
+                                        {
+                                                // ignore malformed entries
+                                        }
+                                }
+                        }
+                }catch(Exception e)
+                {
+                        System.err.println("[Wurst0] Failed to load ClickGUI"
+                                + " collapsed states:");
+                        e.printStackTrace();
+                }
+                return collapsed;
+        }
+
+        /**
          * Saves the ClickGUI window layout: every window's position plus
-         * which hacks are expanded inside it. Loaded again on the next
-         * launch so the GUI looks exactly the same.
+         * which hacks are expanded and which windows are collapsed. Loaded
+         * again on the next launch so the GUI looks exactly the same.
          */
         public void saveClickGuiLayout(Map<String, int[]> layout,
-                Map<String, Map<String, Boolean>> expandedStates)
+                Map<String, Map<String, Boolean>> expandedStates,
+                Map<String, Boolean> collapsedStates)
         {
                 try
                 {
@@ -344,6 +393,10 @@ public final class FileManager
                                                         b.getValue());
                                         pos.add("expanded", exp);
                                 }
+                                Boolean collapsed = collapsedStates
+                                        .get(e.getKey());
+                                if(collapsed != null && collapsed)
+                                        pos.addProperty("collapsed", true);
                                 root.add(e.getKey(), pos);
                         }
                         write(clickGuiFile, root);

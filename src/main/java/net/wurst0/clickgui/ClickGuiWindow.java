@@ -60,6 +60,15 @@ public final class ClickGuiWindow
         // z-order for rendering/clicks; never affects layout
         private int z;
 
+        // collapsed = only the title bar is drawn (click the title to toggle)
+        private boolean collapsed;
+
+        // click-vs-drag discrimination on the title bar: a clean click
+        // collapses/expands the window, a drag moves it
+        private int titlePressX;
+        private int titlePressY;
+        private boolean titleDragMoved;
+
         // scrolling for when the content is taller than the screen allows
         private int scrollY;
         private boolean dragging;
@@ -100,6 +109,8 @@ public final class ClickGuiWindow
         /** Full content height, including everything hidden by scrolling. */
         public int getContentHeight()
         {
+                if(collapsed)
+                        return TITLE_HEIGHT;
                 int height = TITLE_HEIGHT;
                 for(Component c : components)
                         height += c.getHeight();
@@ -113,6 +124,8 @@ public final class ClickGuiWindow
          */
         public int getViewHeight()
         {
+                if(collapsed)
+                        return 0;
                 int content = contentHeight();
                 int avail = screenHeight - (y + TITLE_HEIGHT) - 4;
                 avail = Math.max(MIN_VIEW_HEIGHT, avail);
@@ -179,6 +192,18 @@ public final class ClickGuiWindow
         public boolean wasUserMoved()
         {
                 return userMoved;
+        }
+
+        /** Collapsed = only the title bar is shown. */
+        public boolean isCollapsed()
+        {
+                return collapsed;
+        }
+
+        public void setCollapsed(boolean collapsed)
+        {
+                this.collapsed = collapsed;
+                scrollY = 0;
         }
 
         /** Z-order for stacking windows on top of each other. */
@@ -265,6 +290,10 @@ public final class ClickGuiWindow
                 fr().drawShadow(count, x + width - cw - 3, y + 2,
                         COUNT_COLOR);
 
+                // +/- collapse indicator, just left of the count
+                fr().drawShadow(collapsed ? "+" : "-", x + width - cw - 11,
+                        y + 2, COUNT_COLOR);
+
                 if(viewHeight <= 0)
                         return;
 
@@ -328,6 +357,9 @@ public final class ClickGuiWindow
                                 dragging = true;
                                 dragOffsetX = mouseX - x;
                                 dragOffsetY = mouseY - y;
+                                titlePressX = mouseX;
+                                titlePressY = mouseY;
+                                titleDragMoved = false;
                         }
                         return;
                 }
@@ -348,6 +380,10 @@ public final class ClickGuiWindow
 
         public void mouseReleased(int mouseX, int mouseY, int state)
         {
+                // a clean click on the title bar (no dragging) collapses or
+                // expands the window, like Wurst's own ClickGUI
+                if(dragging && !titleDragMoved && state == 0)
+                        setCollapsed(!collapsed);
                 dragging = false;
                 for(Component c : components)
                         c.mouseReleased(mouseX, mouseY, state);
@@ -358,6 +394,15 @@ public final class ClickGuiWindow
         {
                 if(dragging)
                 {
+                        // only start moving after 4px so a plain click stays
+                        // a collapse/expand toggle
+                        if(!titleDragMoved)
+                        {
+                                if(Math.abs(mouseX - titlePressX) < 4
+                                        && Math.abs(mouseY - titlePressY) < 4)
+                                        return;
+                                titleDragMoved = true;
+                        }
                         x = mouseX - dragOffsetX;
                         y = mouseY - dragOffsetY;
                         clampIntoBounds();
@@ -392,6 +437,9 @@ public final class ClickGuiWindow
         {
                 if(delta == 0 || !contains(mouseX, mouseY))
                         return false;
+
+                if(collapsed)
+                        return true;
 
                 scrollY -= Integer.signum(delta) * SCROLL_STEP;
                 scrollY = Math.max(0, Math.min(scrollY, getMaxScroll()));

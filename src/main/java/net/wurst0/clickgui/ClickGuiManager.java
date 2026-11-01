@@ -58,6 +58,8 @@ public final class ClickGuiManager
                         .loadClickGuiLayout();
                 Map<String, Map<String, Boolean>> savedExpanded = WurstClient
                         .INSTANCE.getFileManager().loadClickGuiExpanded();
+                Map<String, Boolean> savedCollapsed = WurstClient.INSTANCE
+                        .getFileManager().loadClickGuiCollapsed();
                 for(ClickGuiWindow window : windows)
                 {
                         String name = window.getCategory().getName();
@@ -67,6 +69,9 @@ public final class ClickGuiManager
                         Map<String, Boolean> expanded = savedExpanded.get(name);
                         if(expanded != null)
                                 window.restoreExpandedStates(expanded);
+                        Boolean collapsed = savedCollapsed.get(name);
+                        if(collapsed != null)
+                                window.setCollapsed(collapsed);
                 }
 
                 zOrder.addAll(windows);
@@ -85,15 +90,18 @@ public final class ClickGuiManager
                         new java.util.HashMap<String, int[]>();
                 Map<String, Map<String, Boolean>> expanded =
                         new java.util.HashMap<String, Map<String, Boolean>>();
+                Map<String, Boolean> collapsed =
+                        new java.util.HashMap<String, Boolean>();
                 for(ClickGuiWindow window : windows)
                 {
                         String name = window.getCategory().getName();
                         layout.put(name,
                                 new int[]{window.getX(), window.getY()});
                         expanded.put(name, window.getExpandedStates());
+                        collapsed.put(name, window.isCollapsed());
                 }
                 WurstClient.INSTANCE.getFileManager()
-                        .saveClickGuiLayout(layout, expanded);
+                        .saveClickGuiLayout(layout, expanded, collapsed);
         }
 
         /**

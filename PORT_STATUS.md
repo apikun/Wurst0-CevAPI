@@ -1,5 +1,20 @@
 ---
 
+## Collapsible ClickGUI tabs (v0.9.4)
+
+- **Click a category title bar** to collapse the window to just its
+  title; click again to expand. A drag (4px+ movement) still moves the
+  window - click vs drag is discriminated via a press-position +
+  movement-threshold check, like Wurst7's own ClickGUI.
+- `+`/`-` indicator drawn next to the `[count]` badge on the title bar.
+- Collapsed state is persisted per category in `clickgui.json`
+  (`"collapsed": true`) via `FileManager.loadClickGuiCollapsed()` /
+  the extended `saveClickGuiLayout(layout, expanded, collapsed)` and
+  restored on startup.
+- Collapsed windows: `getViewHeight()` returns 0, `getContentHeight()`
+  returns TITLE_HEIGHT, wheel scrolling is swallowed, and the auto
+  column layout stacks them tightly (first-launch case only).
+
 ## ClickGUI fully stable between sessions (v0.9.3)
 
 Fix for "the UI keeps changing even though I didn't do anything". Three
