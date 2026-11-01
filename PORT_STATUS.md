@@ -1,5 +1,52 @@
 ---
 
+## Grim bypass + Bedwars-safe aimbot (v0.9.1)
+
+Built from a source audit of GrimAC's open-source check suite
+(common/checks/impl: aim, combat, timer, packetorder, misc, badpackets,
+multiactions). The fork-specific findings and what was implemented:
+
+**Grim check audit -> implementation mapping:**
+
+| Grim check (source) | What it catches | v0.9.1 countermeasure |
+|---|---|---|
+| TransactionOrder / floating transactions | held transaction answers | PacketTap **vital passthrough**: CPacketConfirmTransaction + CPacketKeepAlive are never held/delayed, even while Blink/FakeLag hold everything else |
+| Post ("sent packets out of the expected movement tick order") | ATTACK / USE_ITEM / DIG / CLICK_WINDOW / ABILITIES / HELD_ITEM / ENTITY_ACTION sent between a flying packet and the next transaction response | PacketTap **post-safe ordering**: post-suspect packets are queued and released right after a transaction response (or right before the next flying packet) - exactly the vanilla slot |
+| BadPacketsR ("stopped sending position updates while still responding to transactions") | long blinks with passing transactions | PacketTap **hold cap**: cyclic auto-flush every N ms (default 600) while holding |
+| Reach ("attacked an entity from too far away", cancels impossible hits) | attacks beyond 3.0 to the interpolated hitbox | **Reach shield**: GrimBypass.capAttackRange() clamps combat range to 2.95; Killaura measures eye -> closest hitbox point, the same surface distance Grim measures |
+| PacketOrderB ("did not swing for attack") | 1.12 clients must swing (1.9 order: attack then animation, but animation must exist or the hit is cancelled) | Killaura/KillauraLegit force the swing when GrimBypass is active |
+| AimModulo360 ("sent a large yaw snap") | yaw delta > 320 degrees | rotation smoothing clamp (max degrees/tick) |
+| BadPacketsD ("invalid rotation pitch") | pitch outside [-90, 90] | pitch clamped in GrimBypass + all rotation code |
+| AimDuplicateLook | duplicate rotation packets | vanilla 1.12 only sends look packets when the rotation changes; killaura converges in-place |
+| Timer ("flags 1.01 on low ping extremely quickly") | timer imbalance vs real time | existing TimerHack grimCap retained, default on |
+
+**GrimBypass v2 settings:** Transaction passthrough, Post-safe ordering,
+Hold cap + ms, Reach shield, Smooth rotations + max rotation/tick, Cap
+Timer speed, Idle packets, Alert on flag, Auto-disable on kick.
+
+**Killaura v2 (the Bedwars-safe aimbot):**
+- **Team check** (default on): never attacks players on your scoreboard
+  team - Hypixel Bedwars teams are scoreboard teams. Fallback for
+  teamless servers compares colored nametags (default white/gray ignored).
+  Shared logic in `util/TeamUtils.java`.
+- **Smooth aim** (default on) + Smoothness slider: eased proportional
+  stepping (0.45 factor, capped per tick), attack only when converged
+  within 30 degrees - looks human, no more instant snapping.
+- **Smart priority** (new default): weighted distance 0.4 + view angle 0.4
+  + missing health 0.2.
+- **Hitbox-aware range**: eye -> closest hitbox point instead of center
+  distance; aims at the closest hitbox point inside 3.0 (body center
+  beyond).
+- KillauraLegit: team check + reach shield + forced swing.
+- AimAssist: fixed a port bug where it skipped players entirely (useless
+  on Bedwars) - now targets players, with an "Ignore teammates" setting.
+
+**Honest limits:** Speed/Flight/HighJump still get flagged - Grim
+re-simulates movement from the packets, so no client-side trick defeats
+the prediction engine. The bypass targets the *packet* surface (order,
+transactions, reach, rotation, timer), which is what a 1.12.2 client can
+actually control.
+
 ## Implemented hacks (v0.9, +72)
 
 Registry corrections this round (important for counts):
