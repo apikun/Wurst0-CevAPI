@@ -1,5 +1,18 @@
 ---
 
+## Keybinds GUI + persistent layout (v0.9.2)
+
+- **KeybindsScreen** (`clickgui/KeybindsScreen.java`): GUI keybind editor
+  in the dark/crimson theme. Lists every hack + current key, click a row
+  then press a key to bind (Escape clears), saves instantly to
+  keybinds.json. Opened via the **Keybinds button** (top-left of the
+  ClickGUI) or **`.binds gui`**.
+- **ClickGUI layout persistence**: dragged window positions are saved to
+  `config/wurst0/clickgui.json` when the GUI closes and restored on every
+  open and game restart. The auto column layout now only positions
+  windows the user never moved - the GUI no longer re-arranges itself.
+- `.binds gui` subcommand opens the editor directly.
+
 ## Grim bypass + Bedwars-safe aimbot (v0.9.1)
 
 Built from a source audit of GrimAC's open-source check suite

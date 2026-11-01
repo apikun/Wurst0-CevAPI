@@ -12,6 +12,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -36,6 +37,7 @@ public final class FileManager
         private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
         private final File settingsFile;
         private final File keybindsFile;
+        private final File clickGuiFile;
         private boolean dirty;
 
         public FileManager()
@@ -45,6 +47,7 @@ public final class FileManager
                         dir.mkdirs();
                 settingsFile = new File(dir, "settings.json");
                 keybindsFile = new File(dir, "keybinds.json");
+                clickGuiFile = new File(dir, "clickgui.json");
         }
 
         /** Called by features on changes. Saves on the next update tick. */
@@ -211,6 +214,70 @@ public final class FileManager
                 }catch(Exception e)
                 {
                         System.err.println("[Wurst0] Failed to save keybinds:");
+                        e.printStackTrace();
+                }
+        }
+
+        /**
+         * Loads the saved ClickGUI window layout: category name ->
+         * {x, y}. Only windows the user actually dragged are stored.
+         */
+        public Map<String, int[]> loadClickGuiLayout()
+        {
+                Map<String, int[]> layout = new HashMap<String, int[]>();
+                if(!clickGuiFile.isFile())
+                        return layout;
+
+                try
+                {
+                        BufferedReader reader =
+                                new BufferedReader(new InputStreamReader(
+                                        new FileInputStream(clickGuiFile), StandardCharsets.UTF_8));
+                        JsonElement element = new JsonParser().parse(reader);
+                        reader.close();
+
+                        if(element == null || !element.isJsonObject())
+                                return layout;
+
+                        for(Entry<String, JsonElement> e : element
+                                .getAsJsonObject().entrySet())
+                        {
+                                if(!e.getValue().isJsonObject())
+                                        continue;
+                                JsonObject pos = e.getValue().getAsJsonObject();
+                                if(!pos.has("x") || !pos.has("y"))
+                                        continue;
+                                layout.put(e.getKey(), new int[]{
+                                        pos.get("x").getAsInt(),
+                                        pos.get("y").getAsInt()});
+                        }
+                }catch(Exception e)
+                {
+                        System.err.println("[Wurst0] Failed to load ClickGUI"
+                                + " layout:");
+                        e.printStackTrace();
+                }
+                return layout;
+        }
+
+        /** Saves the ClickGUI window layout (user-moved windows only). */
+        public void saveClickGuiLayout(Map<String, int[]> layout)
+        {
+                try
+                {
+                        JsonObject root = new JsonObject();
+                        for(Entry<String, int[]> e : layout.entrySet())
+                        {
+                                JsonObject pos = new JsonObject();
+                                pos.addProperty("x", e.getValue()[0]);
+                                pos.addProperty("y", e.getValue()[1]);
+                                root.add(e.getKey(), pos);
+                        }
+                        write(clickGuiFile, root);
+                }catch(Exception e)
+                {
+                        System.err.println("[Wurst0] Failed to save ClickGUI"
+                                + " layout:");
                         e.printStackTrace();
                 }
         }

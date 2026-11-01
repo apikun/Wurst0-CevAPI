@@ -29,18 +29,49 @@ public final class ClickGuiScreen extends GuiScreen
         }
 
         @Override
+        public void onGuiClosed()
+        {
+                // remember window positions across restarts
+                manager.saveLayout();
+                super.onGuiClosed();
+        }
+
+        @Override
         public void drawScreen(int mouseX, int mouseY, float partialTicks)
         {
                 drawDefaultBackground();
                 for(ClickGuiWindow window : manager.getWindows())
                         window.render(mouseX, mouseY);
                 super.drawScreen(mouseX, mouseY, partialTicks);
+
+                // "Keybinds" button, top-left corner
+                String label = "Keybinds";
+                int bw = mc.fontRenderer.getStringWidth(label) + 8;
+                boolean hover = mouseX >= 4 && mouseX < 4 + bw
+                        && mouseY >= 4 && mouseY < 18;
+                drawRect(4, 4, 4 + bw, 18, hover ? 0xFFA03232 : 0xF00A0A0A);
+                drawRect(4, 4, 4 + bw, 5, 0xFFA03232);
+                drawRect(4, 17, 4 + bw, 18, 0xFFA03232);
+                drawRect(4, 4, 5, 18, 0xFFA03232);
+                drawRect(3 + bw, 4, 4 + bw, 18, 0xFFA03232);
+                mc.fontRenderer.drawStringWithShadow(label, 8, 8,
+                        hover ? 0xFFFFFFFF : 0xFFBDBDBD);
         }
 
         @Override
         protected void mouseClicked(int mouseX, int mouseY, int mouseButton)
                 throws IOException
         {
+                // "Keybinds" button opens the keybind editor
+                String label = "Keybinds";
+                int bw = mc.fontRenderer.getStringWidth(label) + 8;
+                if(mouseX >= 4 && mouseX < 4 + bw && mouseY >= 4
+                        && mouseY < 18)
+                {
+                        mc.displayGuiScreen(new KeybindsScreen());
+                        return;
+                }
+
                 // only the top-most window under the mouse gets the click,
                 // so overlapping windows no longer both react to it
                 boolean hit = false;

@@ -155,6 +155,22 @@ public final class ClickGuiWindow
                 this.y = y;
         }
 
+        public Category getCategory()
+        {
+                return category;
+        }
+
+        /**
+         * Restores a saved position and flags the window as user-moved so
+         * the automatic column layout leaves it alone.
+         */
+        public void restorePosition(int x, int y)
+        {
+                this.x = x;
+                this.y = y;
+                this.userMoved = true;
+        }
+
         public boolean wasUserMoved()
         {
                 return userMoved;

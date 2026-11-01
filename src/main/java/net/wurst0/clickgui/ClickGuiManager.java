@@ -6,6 +6,7 @@ package net.wurst0.clickgui;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import net.wurst0.Category;
 import net.wurst0.feature.Hack;
@@ -25,11 +26,11 @@ public final class ClickGuiManager
                                 continue;
 
                         List<Hack> categoryHacks = new ArrayList<Hack>();net.wurst0.hacks.TooManyHaxHack tooManyHax = (net.wurst0.hacks.TooManyHaxHack)WurstClient.INSTANCE
-						.getHacks().getByName("TooManyHax");
+                                                .getHacks().getByName("TooManyHax");
                         for(Hack hack : hacks.getList())
-                        	if(hack.getCategory() == category
-                        			&& (tooManyHax == null || !tooManyHax.isHidden(hack.getName())))
-                        		categoryHacks.add(hack);
+                                if(hack.getCategory() == category
+                                                && (tooManyHax == null || !tooManyHax.isHidden(hack.getName())))
+                                        categoryHacks.add(hack);
 
                         if(categoryHacks.isEmpty())
                                 continue;
@@ -41,6 +42,30 @@ public final class ClickGuiManager
                         windows.add(new ClickGuiWindow(category, x, y, categoryHacks));
                         i++;
                 }
+
+                // restore windows the user dragged in a previous session
+                // (config/wurst0/clickgui.json) so the GUI stops re-arranging
+                // itself every time
+                Map<String, int[]> saved = WurstClient.INSTANCE.getFileManager()
+                        .loadClickGuiLayout();
+                for(ClickGuiWindow window : windows)
+                {
+                        int[] pos = saved.get(window.getCategory().getName());
+                        if(pos != null && pos.length == 2)
+                                window.restorePosition(pos[0], pos[1]);
+                }
+        }
+
+        /** Persists user-moved window positions to clickgui.json. */
+        public void saveLayout()
+        {
+                Map<String, int[]> layout = new java.util.HashMap<String, int[]>();
+                for(ClickGuiWindow window : windows)
+                        if(window.wasUserMoved())
+                                layout.put(window.getCategory().getName(),
+                                        new int[]{window.getX(), window.getY()});
+                WurstClient.INSTANCE.getFileManager()
+                        .saveClickGuiLayout(layout);
         }
 
         /**
