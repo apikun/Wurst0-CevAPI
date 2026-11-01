@@ -5,7 +5,9 @@
 package net.wurst0.clickgui;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.opengl.GL11;
@@ -54,6 +56,9 @@ public final class ClickGuiWindow
         private int screenWidth = 320;
         private int screenHeight = 240;
         private boolean userMoved;
+
+        // z-order for rendering/clicks; never affects layout
+        private int z;
 
         // scrolling for when the content is taller than the screen allows
         private int scrollY;
@@ -174,6 +179,44 @@ public final class ClickGuiWindow
         public boolean wasUserMoved()
         {
                 return userMoved;
+        }
+
+        /** Z-order for stacking windows on top of each other. */
+        public int getZ()
+        {
+                return z;
+        }
+
+        public void setZ(int z)
+        {
+                this.z = z;
+        }
+
+        /** Snapshot of which hacks in this window are expanded. */
+        public Map<String, Boolean> getExpandedStates()
+        {
+                Map<String, Boolean> states =
+                        new LinkedHashMap<String, Boolean>();
+                for(Component c : components)
+                        if(c instanceof FeatureComponent)
+                        {
+                                FeatureComponent fc = (FeatureComponent)c;
+                                states.put(fc.hack.getName(), fc.expanded);
+                        }
+                return states;
+        }
+
+        /** Restores expanded/collapsed state saved in clickgui.json. */
+        public void restoreExpandedStates(Map<String, Boolean> states)
+        {
+                for(Component c : components)
+                        if(c instanceof FeatureComponent)
+                        {
+                                FeatureComponent fc = (FeatureComponent)c;
+                                Boolean state = states.get(fc.hack.getName());
+                                if(state != null)
+                                        fc.expanded = state;
+                        }
         }
 
         public boolean contains(int mouseX, int mouseY)

@@ -260,8 +260,70 @@ public final class FileManager
                 return layout;
         }
 
-        /** Saves the ClickGUI window layout (user-moved windows only). */
-        public void saveClickGuiLayout(Map<String, int[]> layout)
+        /**
+         * Loads which hacks were expanded inside each ClickGUI window.
+         * Returns an empty map if the file is missing or unreadable.
+         */
+        public Map<String, Map<String, Boolean>> loadClickGuiExpanded()
+        {
+                Map<String, Map<String, Boolean>> expanded =
+                        new HashMap<String, Map<String, Boolean>>();
+                if(!clickGuiFile.isFile())
+                        return expanded;
+
+                try
+                {
+                        BufferedReader reader =
+                                new BufferedReader(new InputStreamReader(
+                                        new FileInputStream(clickGuiFile), StandardCharsets.UTF_8));
+                        JsonElement element = new JsonParser().parse(reader);
+                        reader.close();
+
+                        if(element == null || !element.isJsonObject())
+                                return expanded;
+
+                        for(Entry<String, JsonElement> e : element
+                                .getAsJsonObject().entrySet())
+                        {
+                                if(!e.getValue().isJsonObject())
+                                        continue;
+                                JsonObject pos = e.getValue().getAsJsonObject();
+                                if(!pos.has("expanded")
+                                        || !pos.get("expanded").isJsonObject())
+                                        continue;
+                                Map<String, Boolean> states =
+                                        new HashMap<String, Boolean>();
+                                for(Entry<String, JsonElement> s : pos
+                                        .getAsJsonObject("expanded")
+                                        .entrySet())
+                                {
+                                        try
+                                        {
+                                                states.put(s.getKey(),
+                                                        s.getValue().getAsBoolean());
+                                        }catch(Exception ex)
+                                        {
+                                                // ignore malformed entries
+                                        }
+                                }
+                                expanded.put(e.getKey(), states);
+                        }
+                }catch(Exception e)
+                {
+                        System.err.println("[Wurst0] Failed to load ClickGUI"
+                                + " expanded states:");
+                        e.printStackTrace();
+                }
+                return expanded;
+        }
+
+        /**
+         * Saves the ClickGUI window layout: every window's position plus
+         * which hacks are expanded inside it. Loaded again on the next
+         * launch so the GUI looks exactly the same.
+         */
+        public void saveClickGuiLayout(Map<String, int[]> layout,
+                Map<String, Map<String, Boolean>> expandedStates)
         {
                 try
                 {
@@ -271,6 +333,17 @@ public final class FileManager
                                 JsonObject pos = new JsonObject();
                                 pos.addProperty("x", e.getValue()[0]);
                                 pos.addProperty("y", e.getValue()[1]);
+                                Map<String, Boolean> expanded =
+                                        expandedStates.get(e.getKey());
+                                if(expanded != null && !expanded.isEmpty())
+                                {
+                                        JsonObject exp = new JsonObject();
+                                        for(Entry<String, Boolean> b : expanded
+                                                .entrySet())
+                                                exp.addProperty(b.getKey(),
+                                                        b.getValue());
+                                        pos.add("expanded", exp);
+                                }
                                 root.add(e.getKey(), pos);
                         }
                         write(clickGuiFile, root);

@@ -17,6 +17,14 @@ public final class ClickGuiManager
 {
         private final List<ClickGuiWindow> windows = new ArrayList<ClickGuiWindow>();
 
+        /**
+         * Render/click order only. Never used for layout, so bringing a
+         * window to the front no longer reshuffles the other windows'
+         * positions the next time the GUI opens.
+         */
+        private final List<ClickGuiWindow> zOrder =
+                new ArrayList<ClickGuiWindow>();
+
         public ClickGuiManager(Hacks hacks)
         {
                 int i = 0;
@@ -43,29 +51,49 @@ public final class ClickGuiManager
                         i++;
                 }
 
-                // restore windows the user dragged in a previous session
-                // (config/wurst0/clickgui.json) so the GUI stops re-arranging
-                // itself every time
+                // restore window positions and expanded states from a
+                // previous session (config/wurst0/clickgui.json) so the
+                // GUI stops re-arranging itself every time
                 Map<String, int[]> saved = WurstClient.INSTANCE.getFileManager()
                         .loadClickGuiLayout();
+                Map<String, Map<String, Boolean>> savedExpanded = WurstClient
+                        .INSTANCE.getFileManager().loadClickGuiExpanded();
                 for(ClickGuiWindow window : windows)
                 {
-                        int[] pos = saved.get(window.getCategory().getName());
+                        String name = window.getCategory().getName();
+                        int[] pos = saved.get(name);
                         if(pos != null && pos.length == 2)
                                 window.restorePosition(pos[0], pos[1]);
+                        Map<String, Boolean> expanded = savedExpanded.get(name);
+                        if(expanded != null)
+                                window.restoreExpandedStates(expanded);
                 }
+
+                zOrder.addAll(windows);
         }
 
-        /** Persists user-moved window positions to clickgui.json. */
+        /**
+         * Persists EVERY window's position (and expanded/collapsed state)
+         * to clickgui.json, not just windows the user dragged. This is what
+         * keeps the GUI identical between sessions: the automatic column
+         * layout only ever runs on the very first launch, when
+         * clickgui.json does not exist yet.
+         */
         public void saveLayout()
         {
-                Map<String, int[]> layout = new java.util.HashMap<String, int[]>();
+                Map<String, int[]> layout =
+                        new java.util.HashMap<String, int[]>();
+                Map<String, Map<String, Boolean>> expanded =
+                        new java.util.HashMap<String, Map<String, Boolean>>();
                 for(ClickGuiWindow window : windows)
-                        if(window.wasUserMoved())
-                                layout.put(window.getCategory().getName(),
-                                        new int[]{window.getX(), window.getY()});
+                {
+                        String name = window.getCategory().getName();
+                        layout.put(name,
+                                new int[]{window.getX(), window.getY()});
+                        expanded.put(name, window.getExpandedStates());
+                }
                 WurstClient.INSTANCE.getFileManager()
-                        .saveClickGuiLayout(layout);
+                        .saveClickGuiLayout(layout, expanded);
         }
 
         /**
@@ -104,13 +132,18 @@ public final class ClickGuiManager
                 }
         }
 
-        /** Puts the given window on top of the others (render + click order). */
+        /**
+         * Puts the given window on top of the others (render + click order).
+         * Only changes the z-order list, never the layout list, so clicking
+         * a window can no longer rearrange the GUI on the next open.
+         */
         public void bringToFront(ClickGuiWindow window)
         {
-                if(windows.size() > 1 && windows.get(windows.size() - 1) != window)
+                if(zOrder.size() > 1
+                        && zOrder.get(zOrder.size() - 1) != window)
                 {
-                        windows.remove(window);
-                        windows.add(window);
+                        zOrder.remove(window);
+                        zOrder.add(window);
                 }
         }
 
@@ -133,8 +166,9 @@ public final class ClickGuiManager
                         window.unfocusTextFields();
         }
 
+        /** Windows in render/click (z) order; layout uses category order. */
         public List<ClickGuiWindow> getWindows()
         {
-                return windows;
+                return zOrder;
         }
 }

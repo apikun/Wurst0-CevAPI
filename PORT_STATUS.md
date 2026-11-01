@@ -1,5 +1,31 @@
 ---
 
+## ClickGUI fully stable between sessions (v0.9.3)
+
+Fix for "the UI keeps changing even though I didn't do anything". Three
+root causes found in the v0.9.2 persistence:
+
+1. **`bringToFront()` mutated the layout list.** Every click on a window
+   (toggling a hack, moving a slider) moved it to the end of
+   `ClickGuiManager.windows`, and `setScreenSize()` fills its auto columns
+   in list order - so the next GUI open laid the windows out in a different
+   order. Now `bringToFront` only reorders a separate `zOrder` list used
+   for rendering/click picking; layout always iterates the stable
+   category-order list.
+2. **Only dragged windows were persisted.** Windows the user merely
+   clicked (not dragged) kept re-flowing on every open. `saveLayout()`
+   now saves **every** window's position to `clickgui.json`, so the auto
+   column layout only ever runs on the very first launch (no JSON yet).
+3. **Expanded/collapsed state was session-only.** Panel heights changed
+   after every restart, shifting the auto layout again. The expanded map
+   is now saved per category inside `clickgui.json` (backward compatible
+   with the v0.9.2 format) and restored on startup
+   (`FileManager.loadClickGuiExpanded()`).
+
+Result: after one close of the ClickGUI, the layout - window positions,
+z-stacking and open sliders - is byte-stable across restarts. Windows are
+still clamped into view on resize/GUI-scale changes.
+
 ## Keybinds GUI + persistent layout (v0.9.2)
 
 - **KeybindsScreen** (`clickgui/KeybindsScreen.java`): GUI keybind editor
