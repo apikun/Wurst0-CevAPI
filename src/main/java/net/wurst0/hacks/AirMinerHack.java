@@ -104,6 +104,8 @@ public final class AirMinerHack extends Hack implements UpdateListener
                                 continue;
                         if(state.getBlockHardness(mc.world, pos) < 0)
                                 continue;
+                        if(ProtectHack.isProtected(pos))
+                        	continue;
 
                         double dist = center.distanceSq(pos);
                         if(dist <= bestDist && !pos.equals(lastTarget))

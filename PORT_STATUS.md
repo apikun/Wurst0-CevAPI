@@ -1,5 +1,81 @@
 ---
 
+## Implemented hacks (v0.8, +50)
+
+All 50 were stubs before this round; the registry is unchanged
+(317 hacks), stub count dropped 134 -> 84.
+
+| Hack | Category | Notes / limitations |
+|---|---|---|
+| Overlay | RENDER | highlights the current dig target + progress bar on HUD; progress mirrors PlayerControllerMP.curBlockDamageMP via reflection (field_78770_f) with a hardness-based fallback |
+| ChestSearch | RENDER | scans loaded TileEntityChest/ShulkerBox contents (server-synced) for a TextFieldSetting match, cyan boxes |
+| PotEsp | RENDER | boxes around entities with active potion effects: red debuff, green buff, orange mixed |
+| OpenWaterEsp | RENDER | highlights your fishing bobber + water source blocks around it (1.13 open-water concept adapted) |
+| XpGui | RENDER | HUD line with XP level, progress % and total points |
+| RenderAdjust | RENDER | render distance 1-64 and FOV 30-180 beyond the vanilla slider caps (direct GameSettings fields), restore-on-disable |
+| TunnelHoleStairEsp | RENDER | red boxes for 3+ deep drop holes, green for 2-step stair patterns; scan every 30 ticks |
+| NewerNewChunks | RENDER | red = chunks streamed in after enabling, green = pre-loaded (5s grace period); ChunkLoadListener driven |
+| Mapa | RENDER | draws the held filled map on the HUD (MapData.colors -> MapColor quads, 2x downsample), size/opacity sliders |
+| FunCreepers | FUN | colored smoke/angry/lava particles around creepers (client-side) |
+| NecoMode | FUN | stepped cat ears on the HUD corners, scales with ScaledResolution |
+| Flicker | FUN | gamma strobe (mostly dark, occasional flash); restores original gamma on disable |
+| MileyCyrus | FUN | heart/note/happy-villager particles in a ring around the player |
+| ElytraPitch | MOVEMENT | Lock or Clamp your pitch while elytra flying |
+| ElytraDive | MOVEMENT | auto pitch-down + thrust along look vector with max-speed cap |
+| ElytraBounce | MOVEMENT | pre-bounce via downward raytrace before the glide state ends, restores motionY |
+| ElytraWalk | MOVEMENT | low-altitude hover (downward raytrace) + movement-key walking while gliding |
+| EntityControl | MOVEMENT | steer any vehicle with WASD, jump/sneak for up/down, vehicle faces player yaw (client-side) |
+| BoatPhase | MOVEMENT | boat.noClip = true + drive through walls; rubber-bands on strict servers |
+| Teleport | MOVEMENT | periodic step teleports (Forward/Backward/Up/Down), step + delay sliders; "moved too quickly" caveat |
+| SafeTp | MOVEMENT | Teleport that verifies the destination (solid ground, replaceable feet, air head, no lava/fire/cactus in 3x3) and warns locally instead |
+| PearlLauncher | COMBAT | sneak-triggered ender pearl throw from hotbar with cooldown + slot restore (rightClickMouse reflection) |
+| InfiniteReach | COMBAT | teleport-strike: position -> next to target -> attackEntity -> position back; range up to 96 |
+| Outreach | BLOCKS | break/place beyond vanilla reach via custom raytrace driving clickBlock/onPlayerDamageBlock/processRightClickBlock |
+| SpearAssist | COMBAT | auto-releases the bow at a target charge % (getItemInUseCount) |
+| TargetPlace | BLOCKS | places a block under the crosshair entity (trap) |
+| SuperInstaMine | BLOCKS | digs N blocks/tick in a cube around the crosshair block; consults Protect |
+| AirPlace | BLOCKS | sends the placement packet at the look position without a support face |
+| BonemealAura | BLOCKS | bone-meals every IGrowable in range, optional line-of-sight check, auto-switch |
+| SilkOnly | BLOCKS | resetBlockRemoving() when hitting ores/glass/ice without silk touch |
+| StairMaker | BLOCKS | places a block under your feet while jumping forward (sprint staircase) |
+| PlaceNBreak | BLOCKS | place/break alternation while holding use or attack |
+| AutoBuild | BLOCKS | 4 face-relative templates (Box/Wall/Tower/Peninsula), support-face detection, rotates with player yaw, N blocks/tick |
+| InstaBuild | BLOCKS | instant floor/walls/pillar templates, N per tick |
+| TreeBot | OTHER | lite state machine: nearest-log scan -> walk (angle interpolation + collision jump) -> chop trunk top-down |
+| Protect | OTHER | protection sphere set at enable position; Nuker, AreaNuker, SpeedNuker, Excavator, AirMiner and SuperInstaMine all consult ProtectHack.isProtected() |
+| CheatDetector | INTEL | per-player speed/fly motion heuristics, cooldown chat reports, optional red world boxes |
+| AntiCheatDetect | INTEL | regex watch for anti-cheat kick/warn chat patterns, alert line, optional hide |
+| Telemetrics | INTEL | HUD: server IP + ping, entity/player counts, coordinates |
+| CoordLogger | INTEL | regex-scans chat for x/y/z triples, appends to config/wurst0/coords.txt, HUD counter |
+| NoGoZone | INTEL | center set at enable position, radius slider, HUD banner + chat warning inside the zone |
+| SignHistory | INTEL | scans TileEntitySign texts via reflection (signText / field_145915_a) -> config/wurst0/signs.txt |
+| RespawnBedStore | INTEL | records beds you click on into config/wurst0/beds.txt, HUD shows the last one |
+| InventorySorter | ITEMS | sorts the main inventory (9-35) with PICKUP click swaps, one swap per tick, hotbar untouched |
+| FastFill | ITEMS | shift-clicks matching (or all) stacks into the open chest, N per tick |
+| LootSorter | ITEMS | sorts the opened chest with PICKUP swaps, one per tick |
+| XCarry | ITEMS | lite: stashes craft-grid items into the inventory while the GUI is open and puts them back on reopen (true packet XCarry stays blocked on the mixin phase) |
+| QuickShulker | ITEMS | hold sneak ~0.75s with a shulker box in hand to open it (rightClickMouse reflection) |
+| AutoTrader | ITEMS | cycles villager trades via sendEnchantPacket (C11) and QUICK_MOVE-buys from the result slot |
+| BookBot | ITEMS | writes config/wurst0/bookbot.txt into the held writable book via the vanilla MC|BEdit / MC|BSign custom payloads (no GUI automation needed), optional auto-sign with title |
+
+### Infrastructure notes from the v0.8 round
+
+- **Sandbox rebuild after wipe**: repo1.maven.org 429s every request; the
+  scala/lzma LocalFiller artifacts were recovered from **maven.minecraftforge.net**
+  (jars) + hand-written minimal POMs (they reference scala-library 2.11.1,
+  which the Forge maven also carries). lzma-0.0.1 is also available from
+  libraries.minecraft.net. `scripts/fetch_fillers.sh` (workspace) does the
+  retry dance if the Forge maven ever drops them.
+- The RFG patched-jar POM gotcha hit again: `retrofuturagradle-2.0.2.pom`
+  must sit beside the patched jar in the local maven or Gradle silently
+  resolves the unpatched 3072M-heap jar and the decompile task OOMs (exit 137).
+- 1.12.2 API corrections learned: `Vec3d` has `add(...)`, not `addVector`;
+  fields are `x/y/z`; `processRightClickBlock(player, world, pos, side, vec, hand)`;
+  `MapColor` lives in `net.minecraft.block.material`; `GuiMerchant` in
+  `net.minecraft.client.gui`; `ContainerMerchant` exposes `getMerchantInventory()`
+  only (get the IMerchant from `GuiMerchant.getMerchant()`);
+  `IChunkProvider` has no chunk-count accessor.
+
 ## Implemented hacks (v0.7, +31)
 
 | Hack | Category | Notes / limitations |

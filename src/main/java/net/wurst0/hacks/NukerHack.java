@@ -67,6 +67,8 @@ public final class NukerHack extends Hack implements UpdateListener
 				continue;
 			if(state.getBlockHardness(mc.world, pos) < 0)
 				continue;
+			if(ProtectHack.isProtected(pos))
+				continue;
 
 			double dist = p.getDistanceSq(pos.getX() + 0.5,
 				pos.getY() + 0.5, pos.getZ() + 0.5);
