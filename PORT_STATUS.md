@@ -1,5 +1,121 @@
 ---
 
+## Implemented hacks (v0.9, +72)
+
+Registry corrections this round (important for counts):
+- Removed 7 bogus registrations (upstream support classes the stub
+  generator had wrongly added as hacks): AutoChatModelOverrideManager,
+  AutoChatPromptManager, CustomTotemItemModel, CustomTotemModel,
+  CustomTotemSkinFetcher, CustomTotemSpecialRenderer,
+  ShulkerInventoryScreen. Their files are gone; CustomTotemHack carries
+  its own implementation now.
+- Added the 21 upstream ophack/ features that had never been stubbed
+  (AirstrikePlus ... VoiderPlus). Registry now **332 = full upstream
+  coverage + GrimBypassHack (new, fork-specific)**.
+- Stubs dropped 84 -> 27. **305 of 332 hacks are functional.**
+
+### New shared infrastructure in v0.9
+- **PacketTap** (`util/PacketTap.java`): netty pipeline tap injected
+  before "packet_handler"; holds/delays C2S packets (Blink, FakeLag,
+  PacketDelay, PacketRate), drops inbound S2C packets (Backtrack,
+  NbtFilter). Pure netty, no mixins. Wired into the client tick.
+- **AltGuiScreen / NavigatorScreen** (`clickgui/`): standalone screens.
+- **ClickGUI restyle**: dark/crimson "rusher" theme per the user's
+  reference image - near-black panels, dark-red header bars, [count]
+  badges, 1px crimson border, red enabled text / gray disabled text,
+  red slider/checkbox accents, red scrollbar. All ScaledResolution-aware.
+- **TimerHack fix**: was resolving SRG field_71467_ac (rightClickDelayTimer,
+  an int) as the Timer instance in production builds -> would crash; now
+  field_71428_T ("timer"). Also gained a Grim-safe speed cap.
+
+### The +72 (all were stubs; notes = 1.12.2 adaptation)
+
+Render/Fun: ProphuntEsp (pulsing red box on invisible entities), RemoteView
+(client camera swap via setRenderViewEntity), Viewmodel (re-renders hands
+with offset/rotation sliders via cancellable RenderSpecificHandEvent), Lsd
+(hue-cycling overlay + FOV pulse), SkinDerp (random model-part toggles,
+restored on disable), Tired (vignette overlay), CustomTotem (runtime atlas
+swap: totem sprite replaced by local player face, reload-safe).
+
+Packets: PacketDelay (C2S delay slider), PacketRate (inbound pps + held HUD),
+FakeLag (hold with enemy-range + max-hold auto-flush), Blink (hold all C2S,
+flush on disable, Limit auto-restart), Backtrack (drops SPacketPlayerPosLook
+for N ticks after being hurt), NbtFilter (drops oversized S2C tile/slot
+packets).
+
+Movement/World: Fish (swim assist: +0.005 motionY in water), AutoFly
+(altitude lock + vertical control), PearlDrop (pearl at fall threshold),
+ChorusFruit (auto-eat on damage), BedrockEscape (air-pocket scan + Position
+teleport), BedrockStash (budgeted chunk scan ESP for air pockets),
+JoinDrop (drop shulkers/books/filter items on world join), RemoteEnderChest
+(ec GUI without close packet, LWJGL hotkey), BeaconExploit (MC|Beacon
+payload spoof), CrashChest (oversized-NBT boots via creative packet),
+HideModMenu (hides Forge main-menu Mods button), KickForensics (disconnect
+reasons -> config/wurst0/kicks.txt).
+
+Combat: AttributeSwap (smart hotbar swap on attack), PearlIntercept
+(vanilla physics solve + own pearl throw), ShieldSwing (swing while
+blocking + auto offhand equip), Untouchable (teleport out of armed-player
+reach), Towny (auto /t toggle pvp with confirm matching).
+
+Automation: AutoLibrarian (best-book trade scan + optional auto-buy),
+LootRunner (chest scan -> steer -> open -> QUICK_MOVE loot), AutoSwitch
+(hotbar cycle per tick), LootSearch (all lockable container types, ESP +
+HUD), SourceFill (fluid source fill from whitelist), AutoSpawnProofer
+(spawnable-tile highlight + torch fill), TemplateTool (.t save/place/clear
+block templates), MusicAura (note-block right-click cycling), SignFramePT
+(right-click pass-through to block behind).
+
+Intel/Chat: CheatDetector-style OppStats (per-server dossier JSON + HUD),
+MiningEvidence (dropped-item trail detection + tracers), SimulationSonar
+(chunk activity scoring + hotspot ESP), LivestreamDetector (per-player
+YouTube/Twitch/TikTok/Kick live checks), ChatTranslator (google translate
+endpoint via HttpURLConnection, needs internet), AutoComplete
+(.complete <prefix> name/history matcher), ClientChatOverlay (fading
+overlay panel), EnchantmentHandler (enchant summary HUD), UiUtils (slot
+number overlay + GUI debug HUD).
+
+OP/Creative (new batch, upstream ophack): AirstrikePlus (fireball
+strikes), ArmorStandImages (reduced: single player-head stand),
+AutoCommand (command queue loop), AutoDisplays + AutoTexts (adapted to
+invisible marker armor stands with CustomNameVisible), AutoNames
+(/scoreboard teams color/prefix), AutoScoreboard (sidebar objective),
+AutoTitles (/title 1.12 JSON), BoomPlus (explosive overhead), ExplosionAura
+(powered creepers), ForceOPBook + ForceOPSign (clickEvent run_command
+books/signs; servers patched), ForceTP (owner-bound pearl summon),
+HandOfGod (/fill lava + lightning), MultiverseAnnihilator (/mv delete +
+timed /mv confirm), NBTEditor (raw SNBT -> creative packet), 
+OPServerKillModule (admin command sequence), OPplayerTPmodule (tab-list
+cycling /tp), SpawnRadius (/gamerule + spawner HUD), UUIDBan (template
+bans from tab list), VoiderPlus (layer-per-tick /fill air sweeps).
+
+New: GrimBypassHack (OTHER) - idle C03 packets, rotation snap clamp,
+TimerHack cap, chat flag detection ("grim"/"anti-cheat"), optional
+auto-disable of fast movement hacks, HUD flag timer. Best-effort; no
+guarantee against current Grim versions.
+
+### Still stubbed (27, with reasons)
+
+- Version-gated MC content absent in 1.12.2: AnchorAura (respawn anchors
+  1.16), AntiGeyser (26.2 geysers), AutoDisenchant (grindstone 1.14),
+  AutoMace / MaceDmg / WindChargeKey (1.21 mace set), LocatorTriangulation
+  (1.21.6 locator bar), MicDetect (Simple Voice Chat packets),
+  SnowShoe (1.17 powder snow), SoulChalice (26.x custom item),
+  StasisDetector (1.13 bubble columns), SusNoMore (1.20 archaeology),
+  TrialSpawnerEsp (1.21), TridentEsp (1.13 trident), VaultRoll (1.21
+  vault), VillagerDupe (1.20.3 shearing), VillagerRoll (1.20.2 re-roll),
+  WardenEsp (1.19).
+- Need mixins/hooks the Forge-event layer can't provide: CameraDistance
+  + CameraNoClip (EntityRenderer const-inlined third-person distance),
+  NoBackground (no pre-background hook), NoFireOverlay (no fire-overlay
+  hook in 1.12.2 RenderGameOverlayEvent), TextureRotator (block-model
+  internals), PotionSaver (needs per-packet outbound DROP; PacketTap
+  only holds/delays).
+- Upstream is a no-op / alt-relog tool: PortalGui (original is empty),
+  OfflineSettings (needs AltManager/authlib infra).
+
+---
+
 ## Implemented hacks (v0.8, +50)
 
 All 50 were stubs before this round; the registry is unchanged

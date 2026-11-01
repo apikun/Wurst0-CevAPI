@@ -26,6 +26,16 @@ import net.wurst0.settings.TextFieldSetting;
 
 public final class ClickGuiWindow
 {
+        // Rusherhack-style dark/crimson palette (reference: gui.webp)
+        private static final int PANEL_BG = 0xF00A0A0A;
+        private static final int HEADER_BG = 0xFFA03232;
+        private static final int BORDER = 0xFFA03232;
+        private static final int ENABLED_COLOR = 0xFFC33B3B;
+        private static final int DISABLED_COLOR = 0xFFBDBDBD;
+        private static final int COUNT_COLOR = 0xFF909090;
+        private static final int HOVER_COLOR = 0x28C33B3B;
+        private static final int ACCENT = 0xFF8E2B2B;
+
         static final int WIDTH = 106;
         static final int TITLE_HEIGHT = 12;
         static final int COMPONENT_HEIGHT = 12;
@@ -166,11 +176,18 @@ public final class ClickGuiWindow
                 int viewHeight = getViewHeight();
                 scrollY = Math.max(0, Math.min(scrollY, getMaxScroll()));
 
-                // window background
+                // window background (near-black, matches reference)
                 Gui.drawRect(x, y, x + width, y + TITLE_HEIGHT + viewHeight,
-                        0xC0101010);
-                // title bar
-                int titleColor = 0xFF1E1E28;
+                        PANEL_BG);
+                // 1px crimson border around the whole panel
+                Gui.drawRect(x, y, x + 1, y + TITLE_HEIGHT + viewHeight,
+                        BORDER);
+                Gui.drawRect(x + width - 1, y, x + width,
+                        y + TITLE_HEIGHT + viewHeight, BORDER);
+                Gui.drawRect(x, y + TITLE_HEIGHT + viewHeight - 1, x + width,
+                        y + TITLE_HEIGHT + viewHeight, BORDER);
+                // title bar (dark red)
+                int titleColor = HEADER_BG;
                 if(isRainbowUi())
                 {
                         float hue = (System.currentTimeMillis() % 4000)
@@ -178,11 +195,16 @@ public final class ClickGuiWindow
                         titleColor = 0xFF000000 | java.awt.Color.HSBtoRGB(
                                 hue, 0.65F, 0.5F);
                 }
-                Gui.drawRect(x, y, x + width, y + TITLE_HEIGHT, titleColor);
-                Gui.drawRect(x, y + TITLE_HEIGHT - 1, x + width,
-                        y + TITLE_HEIGHT, 0xFF000000 | category.getColor());
+                Gui.drawRect(x + 1, y, x + width - 1, y + TITLE_HEIGHT,
+                        titleColor);
 
                 fr().drawShadow(category.getName(), x + 3, y + 2, 0xFFFFFFFF);
+
+                // [count] badge, right-aligned like the reference
+                String count = "[" + components.size() + "]";
+                int cw = fr().getStringWidth(count);
+                fr().drawShadow(count, x + width - cw - 3, y + 2,
+                        COUNT_COLOR);
 
                 if(viewHeight <= 0)
                         return;
@@ -207,11 +229,11 @@ public final class ClickGuiWindow
                                 / (viewHeight + maxScroll));
                         int barY = y + TITLE_HEIGHT + (viewHeight - barHeight)
                                 * scrollY / maxScroll;
-                        Gui.drawRect(x + width - 2, y + TITLE_HEIGHT,
-                                x + width - 1, y + TITLE_HEIGHT + viewHeight,
-                                0x30808080);
-                        Gui.drawRect(x + width - 2, barY, x + width - 1,
-                                barY + barHeight, 0xFF50C0C0);
+                        Gui.drawRect(x + width - 3, y + TITLE_HEIGHT,
+                                x + width - 2, y + TITLE_HEIGHT + viewHeight,
+                                0x20808080);
+                        Gui.drawRect(x + width - 3, barY, x + width - 2,
+                                barY + barHeight, ACCENT);
                 }
         }
 
@@ -447,14 +469,11 @@ public final class ClickGuiWindow
                         boolean hov = hovered(width, wx, wy, mouseX, mouseY);
                         if(hov)
                                 Gui.drawRect(wx, wy, wx + width,
-                                        wy + COMPONENT_HEIGHT, 0x30FFFFFF);
+                                        wy + COMPONENT_HEIGHT, HOVER_COLOR);
 
-                        if(hack.isEnabled())
-                                Gui.drawRect(wx, wy + 2, wx + 2,
-                                        wy + COMPONENT_HEIGHT - 2, 0xFF00E000);
-
-                        int color = hack.isEnabled() ? 0xFF00FF00
-                                : 0xFFD0D0D0;
+                        // enabled = red text, disabled = gray (reference style)
+                        int color = hack.isEnabled() ? ENABLED_COLOR
+                                : DISABLED_COLOR;
                         fr().drawShadow(hack.getName(), wx + 5, wy + 2, color);
 
                         if(!children.isEmpty())
@@ -556,17 +575,17 @@ public final class ClickGuiWindow
                 {
                         if(hovered(width, wx, wy, mouseX, mouseY))
                                 Gui.drawRect(wx, wy, wx + width,
-                                        wy + COMPONENT_HEIGHT, 0x30FFFFFF);
+                                        wy + COMPONENT_HEIGHT, HOVER_COLOR);
 
                         // checkbox
                         Gui.drawRect(wx + 5, wy + 3, wx + 10, wy + 8,
                                 0xFF404040);
                         if(setting.isChecked())
                                 Gui.drawRect(wx + 6, wy + 4, wx + 9, wy + 7,
-                                        0xFF00E000);
+                                        ENABLED_COLOR);
 
                         fr().drawShadow(setting.getName(), wx + 14, wy + 2,
-                                0xFFD0D0D0);
+                                0xFFBDBDBD);
                 }
 
                 @Override
@@ -603,11 +622,11 @@ public final class ClickGuiWindow
                 {
                         if(hovered(width, wx, wy, mouseX, mouseY))
                                 Gui.drawRect(wx, wy, wx + width,
-                                        wy + COMPONENT_HEIGHT, 0x30FFFFFF);
+                                        wy + COMPONENT_HEIGHT, HOVER_COLOR);
 
                         // slider bar
                         Gui.drawRect(wx + 5, wy + 9, wx + width - 5, wy + 10,
-                                0xFF404040);
+                                0xFF3A3A3A);
 
                         double fraction =
                                 (setting.getValue() - setting.getMinimum())
@@ -616,11 +635,11 @@ public final class ClickGuiWindow
                         fraction = Math.max(0, Math.min(1, fraction));
                         Gui.drawRect(wx + 5, wy + 9,
                                 wx + 5 + (int)((width - 10) * fraction),
-                                wy + 10, 0xFF00C0C0);
+                                wy + 10, ACCENT);
 
                         String text = setting.getName() + ": "
                                 + formatValue(setting.getValue());
-                        fr().drawShadow(text, wx + 5, wy + 1, 0xFFD0D0D0);
+                        fr().drawShadow(text, wx + 5, wy + 1, 0xFFBDBDBD);
                 }
 
                 private String formatValue(double value)
@@ -687,11 +706,11 @@ public final class ClickGuiWindow
                 {
                         if(hovered(width, wx, wy, mouseX, mouseY))
                                 Gui.drawRect(wx, wy, wx + width,
-                                        wy + COMPONENT_HEIGHT, 0x30FFFFFF);
+                                        wy + COMPONENT_HEIGHT, HOVER_COLOR);
 
                         fr().drawShadow(
                                 setting.getName() + ": " + setting.getSelected(),
-                                wx + 5, wy + 2, 0xFFD0D0D0);
+                                wx + 5, wy + 2, 0xFFBDBDBD);
                 }
 
                 @Override
@@ -731,10 +750,10 @@ public final class ClickGuiWindow
                                 0xFFA0A0A0);
 
                         Gui.drawRect(wx + 4, wy + 11, wx + width - 4,
-                                wy + 22, editing ? 0xFF303040 : 0xFF202020);
+                                wy + 22, editing ? 0xFF2A1515 : 0xFF1A1A1A);
                         if(editing)
                                 Gui.drawRect(wx + 4, wy + 11, wx + 5,
-                                        wy + 22, 0xFF00C0C0);
+                                        wy + 22, ENABLED_COLOR);
 
                         String text = editing ? buffer.toString()
                                 : setting.getValue();

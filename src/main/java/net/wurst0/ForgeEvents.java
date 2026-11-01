@@ -39,6 +39,8 @@ public final class ForgeEvents
                 if(event.phase != TickEvent.Phase.END)
                         return;
                 WurstClient.INSTANCE.getEventManager().fire(new UpdateEvent());
+                // PacketTap: releases delayed outbound packets
+                net.wurst0.util.PacketTap.tick();
                 // save config at most once per tick when something changed
                 try
                 {
@@ -184,26 +186,26 @@ public final class ForgeEvents
         @SubscribeEvent
         public void onPlaySound(net.minecraftforge.client.event.sound.PlaySoundEvent event)
         {
-        	if(mc.player == null)
-        		return;
-        	Hack soundMute = WurstClient.INSTANCE.getHacks()
-        		.getByName("SoundMute");
-        	if(soundMute != null && soundMute.isEnabled()
-        			&& ((net.wurst0.hacks.SoundMuteHack)soundMute)
-        				.shouldMute(event.getSound() == null ? ""
-					: event.getSound().getSoundLocation().getPath()))
-        		event.setResultSound(null);
+                if(mc.player == null)
+                        return;
+                Hack soundMute = WurstClient.INSTANCE.getHacks()
+                        .getByName("SoundMute");
+                if(soundMute != null && soundMute.isEnabled()
+                                && ((net.wurst0.hacks.SoundMuteHack)soundMute)
+                                        .shouldMute(event.getSound() == null ? ""
+                                        : event.getSound().getSoundLocation().getPath()))
+                        event.setResultSound(null);
         }
         @SubscribeEvent
         public void onRightClickEmpty(
-        	net.minecraftforge.event.entity.player.PlayerInteractEvent.RightClickEmpty event)
+                net.minecraftforge.event.entity.player.PlayerInteractEvent.RightClickEmpty event)
         {
-        	if(mc.player == null || event.getEntityPlayer() != mc.player)
-        		return;
-        	Hack liquids = WurstClient.INSTANCE.getHacks()
-        		.getByName("Liquids");
-        	if(liquids != null && liquids.isEnabled())
-        		((net.wurst0.hacks.LiquidsHack)liquids).handleEmptyClick();
+                if(mc.player == null || event.getEntityPlayer() != mc.player)
+                        return;
+                Hack liquids = WurstClient.INSTANCE.getHacks()
+                        .getByName("Liquids");
+                if(liquids != null && liquids.isEnabled())
+                        ((net.wurst0.hacks.LiquidsHack)liquids).handleEmptyClick();
         }
         @SubscribeEvent
         public void onExplosionDetonate(ExplosionEvent.Detonate event)
