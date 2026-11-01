@@ -10,50 +10,33 @@ TOKEN=$(sed -n 's#https://[^:/]*:\([^@]*\)@github.com#\1#p' \
 
 git add -A
 git -c user.name="apikun" -c user.email="apikun@users.noreply.github.com" \
-  commit -m "Wurst0 v0.9.4: ClickGUI fully stable between sessions - z-order no longer reshuffles layout, all window positions persisted, expanded states saved"
+  commit -m "Wurst0 v0.9.4: Collapsible ClickGUI tabs - click a title bar to collapse/expand (drag still moves), +/- indicator, collapsed state persisted in clickgui.json"
 
 git push origin mc1.12.2 2>&1 | grep -v "token" || true
 
 git tag -f v0.9.4
 git push origin v0.9.4 2>&1 | grep -v "token" || true
 
-cat > /tmp/relbody093.md <<'EOF'
-Tenth release of the **Wurst0** 1.12.2 port (Wurst7-CevAPI -> Forge 1.12.2, Java 8).
+cat > /tmp/relbody094.md <<'EOF'
+Eleventh release of the **Wurst0** 1.12.2 port (Wurst7-CevAPI -> Forge 1.12.2, Java 8).
 
 ## Install
 1. Install Minecraft 1.12.2 with **Forge 1.12.2-14.23.5.2859** (or newer 14.23.5.x).
 2. Drop `Wurst0-0.9.4.jar` into your `.minecraft/mods` folder.
 3. In game: **Right Shift** opens the ClickGUI, the **Keybinds** button (top-left) or `.binds gui` opens the keybind editor, `.help` lists all commands.
 
-## What's new in v0.9.4 - the GUI finally stops moving
+## What's new in v0.9.4 - Collapsible tabs
 
-Fixes "the UI keeps changing even though I didn't do anything". Three bugs
-in the v0.9.2 persistence found and fixed:
+You can now **collapse any category window down to just its title bar**:
 
-### 1. Clicking a hack re-arranged the whole GUI
-Every click on a window (toggling a hack, moving a slider) silently moved
-that window to the end of the layout list, so the next time you opened the
-GUI all panels were placed in a different order. Now clicking only changes
-the stacking (z) order - **layout order is fixed by category and never
-changes**.
-
-### 2. Windows you clicked but never dragged were never saved
-Previously only windows you physically dragged were remembered; everything
-else re-flowed on every open. Now **every** panel position is saved to
-`config/wurst0/clickgui.json` when the GUI closes and restored exactly on
-the next launch. The auto column layout only ever runs on the very first
-launch.
-
-### 3. Expanded panels reset every restart
-Which hacks had their sliders open is now saved too (inside the same
-`clickgui.json`), so panel heights - and therefore positions - stay
-identical between sessions.
-
-**Result:** open the GUI once and close it - from then on the layout is
-exactly the same every session. Move panels wherever you want; they stay.
+- **Click the title bar** of a tab (Combat, Render, Movement, ...) to collapse it - click again to expand it.
+- **Dragging** the title bar still moves the window (a clean click vs a 4px+ drag are told apart, same as Wurst's real ClickGUI).
+- A **`+` / `-` indicator** next to the `[count]` badge shows whether the tab is collapsed.
+- Collapsed tabs are **saved** in `config/wurst0/clickgui.json` and restored on restart, together with window positions and expanded sliders.
 
 ## Previous releases
-- v0.9.2: Keybinds GUI editor (Keybinds button / `.binds gui`), first layout persistence
+- v0.9.3: ClickGUI layout fully stable between sessions (clicks no longer reshuffle panels, all positions persisted)
+- v0.9.2: Keybinds GUI editor (Keybinds button / `.binds gui`)
 - v0.9.1: Grim bypass suite + Bedwars-safe Killaura (team check, smooth aim)
 - v0.9.0: +72 hacks (305/332 functional), dark/crimson ClickGUI theme
 
@@ -71,11 +54,11 @@ for line in open(os.path.expanduser('~/.git-credentials')):
         token = line.split('//')[1].split('@')[0].split(':')[1]
         break
 
-body = open('/tmp/relbody093.md').read()
+body = open('/tmp/relbody094.md').read()
 data = json.dumps({
     'tag_name': 'v0.9.4',
     'target_commitish': 'mc1.12.2',
-    'name': 'Wurst0 v0.9.4 - ClickGUI fully stable between sessions',
+    'name': 'Wurst0 v0.9.4 - Collapsible tabs',
     'body': body,
 }).encode()
 
